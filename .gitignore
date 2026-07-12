@@ -1,0 +1,102 @@
+# ================================
+# BACKEND IGNORES
+# ================================
+
+# Node modules
+server/node_modules/
+client/node_modules/
+
+# Environment files
+server/.env
+client/.env
+.env
+.env.local
+.env.development
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Build outputs
+server/dist/
+server/build/
+client/dist/
+client/build/
+client/.vite/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+
+# ================================
+# FRONTEND IGNORES
+# ================================
+
+# Dependencies
+client/node_modules/
+client/package-lock.json
+client/yarn.lock
+
+# Build
+client/dist/
+client/build/
+client/.vite/
+
+# Cache
+client/.cache/
+client/.parcel-cache/
+
+# ================================
+# MISC
+# ================================
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Testing
+coverage/
+.nyc_output/
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.development
+.env.production
+
+# Certificates
+*.pem
+*.crt
+*.key
+
+# Uploads
+server/uploads/
+server/temp/
