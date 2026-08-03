@@ -1,11 +1,21 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
     extend: {
+      colors: {
+        'theme-primary': 'var(--bg-primary)',
+        'theme-secondary': 'var(--bg-secondary)',
+        'theme-card': 'var(--bg-card)',
+        'theme-sidebar': 'var(--bg-sidebar)',
+        'theme-text': 'var(--text-primary)',
+        'theme-muted': 'var(--text-secondary)',
+        'theme-border': 'var(--border-color)',
+      },
       animation: {
         'slide-up': 'slideUp 0.5s ease-out forwards',
         'fade-in': 'fadeIn 0.6s ease-out forwards',

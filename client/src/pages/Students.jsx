@@ -66,10 +66,10 @@ const Students = () => {
     <Layout>
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Students</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Students</h2>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center px-4 py-2 space-x-2 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200"
+            className="flex items-center px-4 py-2 space-x-2 transition-colors bg-gray-100 dark:bg-[#1A1A1A] text-gray-700 dark:text-zinc-300 rounded-lg hover:bg-gray-200 dark:hover:bg-[#262626]"
           >
             <FunnelIcon className="w-5 h-5" />
             <span>Filters</span>
@@ -77,7 +77,7 @@ const Students = () => {
         </div>
 
         {/* Search Bar */}
-        <div className="p-4 mb-6 bg-white shadow-sm rounded-xl">
+        <div className="p-4 mb-6 bg-white dark:bg-[#111111] border border-gray-100 dark:border-[#1F1F1F] shadow-sm rounded-xl">
           <div className="flex space-x-4">
             <div className="relative flex-1">
               <input
@@ -85,39 +85,40 @@ const Students = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search students by name or email..."
-                className="w-full px-4 py-2 pl-10 transition border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               />
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-zinc-500 absolute left-3 top-2.5" />
             </div>
             <button
-              onClick={handleSearch}
-              className="px-6 py-2 font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center justify-center px-4 py-2 text-gray-700 dark:text-zinc-300 bg-gray-100 dark:bg-[#1A1A1A] rounded-lg hover:bg-gray-200 dark:hover:bg-[#262626] transition-colors"
             >
-              Search
+              <FunnelIcon className="w-5 h-5 mr-2" />
+              Filters
             </button>
           </div>
 
           {/* Filters */}
           {showFilters && (
-            <div className="grid grid-cols-1 gap-4 pt-4 mt-4 border-t border-gray-200 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 pt-4 mt-4 border-t border-gray-200 dark:border-[#1F1F1F] md:grid-cols-3">
               <input
                 type="text"
                 placeholder="College"
                 value={filters.college}
                 onChange={(e) => setFilters({ ...filters, college: e.target.value })}
-                className="px-4 py-2 transition border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="text"
                 placeholder="Department"
                 value={filters.department}
                 onChange={(e) => setFilters({ ...filters, department: e.target.value })}
-                className="px-4 py-2 transition border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <select
                 value={filters.year}
                 onChange={(e) => setFilters({ ...filters, year: e.target.value })}
-                className="px-4 py-2 transition border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Years</option>
                 <option value="1st">1st Year</option>
@@ -136,10 +137,10 @@ const Students = () => {
             <div className="w-12 h-12 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
           </div>
         ) : studentsArray.length === 0 ? (
-          <div className="p-12 text-center bg-white shadow-sm rounded-xl">
+          <div className="p-12 text-center bg-white dark:bg-[#111111] border border-gray-100 dark:border-[#1F1F1F] shadow-sm rounded-xl">
             <div className="mb-4 text-5xl">🔍</div>
-            <p className="text-lg text-gray-500">No students found</p>
-            <p className="mt-1 text-sm text-gray-400">Try adjusting your search filters</p>
+            <p className="text-lg text-gray-500 dark:text-zinc-400">No students found</p>
+            <p className="mt-1 text-sm text-gray-400 dark:text-zinc-500">Try adjusting your search filters</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -147,28 +148,28 @@ const Students = () => {
               <Link
                 key={student._id}
                 to={`/students/${student._id}`}
-                className="p-6 transition-all duration-200 bg-white shadow-sm rounded-xl hover:shadow-lg hover:transform hover:-translate-y-1"
+                className="p-6 transition-all duration-200 bg-white dark:bg-[#111111] border border-gray-100 dark:border-[#1F1F1F] text-gray-900 dark:text-white shadow-sm rounded-xl hover:shadow-lg hover:transform hover:-translate-y-1"
               >
                 <div className="flex items-start space-x-4">
                   <img
                     src={student.profileImage || 'https://via.placeholder.com/60'}
                     alt={student.name}
-                    className="object-cover border-2 border-gray-100 rounded-full h-14 w-14"
+                    className="object-cover border-2 border-gray-100 dark:border-[#262626] rounded-full h-14 w-14"
                     onError={(e) => e.target.src = 'https://via.placeholder.com/60'}
                   />
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold truncate">{student.name || 'User'}</h3>
-                    <p className="text-sm text-gray-600 truncate">{student.college || 'College'}</p>
-                    <p className="text-sm text-gray-500 truncate">{student.department || 'Department'}</p>
+                    <h3 className="text-lg font-semibold truncate text-gray-900 dark:text-white">{student.name || 'User'}</h3>
+                    <p className="text-sm text-gray-600 dark:text-zinc-400 truncate">{student.college || 'College'}</p>
+                    <p className="text-sm text-gray-500 dark:text-zinc-500 truncate">{student.department || 'Department'}</p>
                     {student.skills && student.skills.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {student.skills.slice(0, 3).map((skill, index) => (
-                          <span key={index} className="px-2 py-1 text-xs text-blue-800 bg-blue-100 rounded-full">
+                          <span key={index} className="px-2 py-1 text-xs text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 rounded-full">
                             {skill}
                           </span>
                         ))}
                         {student.skills.length > 3 && (
-                          <span className="text-xs text-gray-500">+{student.skills.length - 3}</span>
+                          <span className="text-xs text-gray-500 dark:text-zinc-500">+{student.skills.length - 3}</span>
                         )}
                       </div>
                     )}

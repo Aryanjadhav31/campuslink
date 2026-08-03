@@ -5,14 +5,19 @@ import {
   ChatBubbleLeftIcon, 
   ShareIcon, 
   BookmarkIcon,
-  EllipsisHorizontalIcon
+  EllipsisHorizontalIcon,
+  TrashIcon,
+  FlagIcon,
+  XMarkIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
-const PostCard = ({ post, onLike, onComment }) => {
+const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) => {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [comment, setComment] = useState('');
@@ -21,10 +26,23 @@ const PostCard = ({ post, onLike, onComment }) => {
   const [comments, setComments] = useState(post?.comments || []);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Deletion UI State
+  const [showPostMenu, setShowPostMenu] = useState(false);
+  const [showDeletePostModal, setShowDeletePostModal] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Lightbox UI State
+  const [selectedImageIndex, setSelectedImageIndex] = useState(null);
+
   // Guard against missing post
   if (!post || !post._id) {
     return null;
   }
+
+  // Ownership checks
+  const postAuthorId = post.user?._id || post.user;
+  const isPostOwner = postAuthorId && user?._id && postAuthorId.toString() === user._id.toString();
 
   const handleLike = async () => {
     try {
@@ -63,6 +81,38 @@ const PostCard = ({ post, onLike, onComment }) => {
     }
   };
 
+  const handleConfirmDeletePost = async () => {
+    try {
+      setIsDeleting(true);
+      await axios.delete(`http://localhost:5000/api/posts/${post._id}`);
+      toast.success('Post deleted');
+      setShowDeletePostModal(false);
+      if (onDeletePost) onDeletePost(post._id);
+    } catch (error) {
+      console.error('Delete post error:', error);
+      toast.error(error.response?.data?.message || "You can't delete this post");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleConfirmDeleteComment = async () => {
+    if (!commentToDelete) return;
+    try {
+      setIsDeleting(true);
+      await axios.delete(`http://localhost:5000/api/posts/${post._id}/comments/${commentToDelete._id}`);
+      setComments(prev => prev.filter(c => c._id !== commentToDelete._id));
+      toast.success('Comment deleted');
+      setCommentToDelete(null);
+      if (onDeleteComment) onDeleteComment(post._id, commentToDelete._id);
+    } catch (error) {
+      console.error('Delete comment error:', error);
+      toast.error(error.response?.data?.message || "You can't delete this comment");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const formatDate = (date) => {
     if (!date) return 'Recent';
     const d = new Date(date);
@@ -80,118 +130,178 @@ const PostCard = ({ post, onLike, onComment }) => {
   };
 
   return (
-    <div className="p-5 mb-4 transition-shadow bg-white shadow-sm rounded-xl hover:shadow-md">
+    <div className="p-6 mb-5 transition-all duration-200 bg-white dark:bg-[#111111] border border-gray-100/80 dark:border-[#1F1F1F] shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.07)] rounded-2xl relative">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <Link to={`/students/${post.user?._id}`}>
-            <img
-              src={post.user?.profileImage || 'https://via.placeholder.com/40'}
-              alt={post.user?.name}
-              className="object-cover border-2 border-gray-100 rounded-full h-11 w-11"
-              onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
-            />
+          <Link to={`/students/${post.user?._id}`} className="relative block group">
+            <div className="p-0.5 bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 rounded-full shadow-sm">
+              <img
+                src={post.user?.profileImage || 'https://via.placeholder.com/40'}
+                alt={post.user?.name}
+                className="object-cover border-2 border-white dark:border-[#121212] rounded-full h-11 w-11 transition-transform group-hover:scale-105"
+                onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
+              />
+            </div>
           </Link>
           <div>
-            <Link to={`/students/${post.user?._id}`} className="font-semibold transition-colors hover:text-blue-600">
+            <Link to={`/students/${post.user?._id}`} className="font-bold text-gray-900 dark:text-white transition-colors hover:text-blue-600">
               {post.user?.name || 'Unknown User'}
             </Link>
-            <p className="text-xs text-gray-400">{formatDate(post.createdAt)}</p>
+            <p className="text-xs text-gray-400 dark:text-zinc-400 font-medium">{formatDate(post.createdAt)}</p>
           </div>
         </div>
-        <button className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
-          <EllipsisHorizontalIcon className="w-5 h-5 text-gray-500" />
-        </button>
+
+        {/* Top Right "..." Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowPostMenu(!showPostMenu)}
+            className="p-2 hover:bg-gray-100/80 dark:hover:bg-[#1A1A1A] rounded-full transition-colors cursor-pointer"
+          >
+            <EllipsisHorizontalIcon className="w-5 h-5 text-gray-400 dark:text-zinc-400 hover:text-gray-600 dark:hover:text-white" />
+          </button>
+
+          {showPostMenu && (
+            <div className="absolute right-0 top-10 z-30 w-44 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] rounded-xl shadow-2xl py-1.5 transition-all">
+              {isPostOwner ? (
+                <button
+                  onClick={() => {
+                    setShowPostMenu(false);
+                    setShowDeletePostModal(true);
+                  }}
+                  className="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                >
+                  <TrashIcon className="w-4 h-4 mr-2.5 text-red-500" />
+                  Delete Post
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowPostMenu(false);
+                    toast('Post reported for review', { icon: '🚩' });
+                  }}
+                  className="w-full flex items-center px-4 py-2.5 text-xs font-medium text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-[#1A1A1A] transition-colors cursor-pointer"
+                >
+                  <FlagIcon className="w-4 h-4 mr-2.5 text-gray-400 dark:text-zinc-400" />
+                  Report Post
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}
-      <p className="mb-4 text-gray-800 whitespace-pre-wrap">{post.content || ''}</p>
+      <p className="mb-4 text-gray-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap font-normal text-[15px]">{post.content || ''}</p>
 
       {post.images && post.images.length > 0 && (
-        <div className={`grid gap-1.5 mb-4 ${
+        <div className={`grid gap-2 mb-4 overflow-hidden rounded-xl group ${
           post.images.length === 1 ? 'grid-cols-1' : 
           post.images.length === 2 ? 'grid-cols-2' : 
           'grid-cols-3'
         }`}>
           {post.images.map((image, index) => (
-            <img
-              key={index}
-              src={image}
-              alt={`Post image ${index + 1}`}
-              className={`rounded-lg object-cover w-full ${
-                post.images.length === 1 ? 'max-h-96' : 'h-48'
-              }`}
-              onError={(e) => e.target.style.display = 'none'}
-            />
+            <div 
+              key={index} 
+              onClick={() => setSelectedImageIndex(index)}
+              className="overflow-hidden rounded-xl bg-gray-100 dark:bg-[#161616] cursor-pointer relative group/img"
+            >
+              <img
+                src={image}
+                alt={`Post image ${index + 1}`}
+                className={`object-cover w-full transition-transform duration-300 group-hover/img:scale-105 ${
+                  post.images.length === 1 ? 'max-h-96' : 'h-48'
+                }`}
+                onError={(e) => e.target.style.display = 'none'}
+              />
+            </div>
           ))}
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-3 border-t border-gray-100/80 dark:border-[#1F1F1F]">
         <div className="flex items-center space-x-6">
           <button
             onClick={handleLike}
             disabled={isLoading}
-            className={`flex items-center space-x-1.5 transition-colors ${
-              liked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'
+            className={`flex items-center space-x-2 transition-all p-1.5 rounded-full hover:bg-red-50/60 cursor-pointer ${
+              liked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
             }`}
           >
             {liked ? (
-              <HeartSolidIcon className="w-5 h-5" />
+              <HeartSolidIcon className="w-5 h-5 animate-pulse" />
             ) : (
               <HeartIcon className="w-5 h-5" />
             )}
-            <span className="text-sm font-medium">{likesCount}</span>
+            <span className="text-sm font-semibold">{likesCount}</span>
           </button>
           
           <button
             onClick={() => setShowComments(!showComments)}
-            className="flex items-center space-x-1.5 text-gray-500 hover:text-blue-600 transition-colors"
+            className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 transition-all p-1.5 rounded-full hover:bg-blue-50/60 cursor-pointer"
           >
             <ChatBubbleLeftIcon className="w-5 h-5" />
-            <span className="text-sm font-medium">{comments.length}</span>
+            <span className="text-sm font-semibold">{comments.length}</span>
           </button>
           
-          <button className="flex items-center space-x-1.5 text-gray-500 hover:text-green-600 transition-colors">
+          <button className="flex items-center space-x-2 text-gray-500 hover:text-emerald-600 transition-all p-1.5 rounded-full hover:bg-emerald-50/60 cursor-pointer">
             <ShareIcon className="w-5 h-5" />
           </button>
         </div>
         
-        <button className="text-gray-400 transition-colors hover:text-blue-600">
+        <button className="p-1.5 text-gray-400 transition-all hover:text-blue-600 hover:bg-blue-50/60 rounded-full cursor-pointer">
           <BookmarkIcon className="w-5 h-5" />
         </button>
       </div>
 
       {/* Comments Section */}
       {showComments && (
-        <div className="pt-3 mt-4 border-t border-gray-100">
+        <div className="pt-3 mt-4 border-t border-gray-100 dark:border-[#1F1F1F]">
           <div className="pr-2 space-y-3 overflow-y-auto max-h-60">
             {comments.length === 0 ? (
-              <p className="py-2 text-sm text-center text-gray-400">No comments yet</p>
+              <p className="py-2 text-sm text-center text-gray-400 dark:text-zinc-500">No comments yet</p>
             ) : (
-              comments.map((comment, index) => (
-                <div key={index} className="flex items-start space-x-2.5">
-                  <img
-                    src={comment.user?.profileImage || 'https://via.placeholder.com/32'}
-                    alt={comment.user?.name}
-                    className="flex-shrink-0 object-cover w-8 h-8 rounded-full"
-                    onError={(e) => e.target.src = 'https://via.placeholder.com/32'}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="bg-gray-50 rounded-lg px-3 py-1.5">
-                      <p className="text-sm">
-                        <span className="font-semibold">{comment.user?.name || 'Unknown'}</span>
-                        {' '}
-                        <span className="text-gray-700">{comment.text}</span>
-                      </p>
+              comments.map((commentItem) => {
+                const commentAuthorId = commentItem.user?._id || commentItem.user;
+                const canDeleteComment = isPostOwner || (commentAuthorId && user?._id && commentAuthorId.toString() === user._id.toString());
+
+                return (
+                  <div key={commentItem._id} className="flex items-start justify-between group/comment py-1">
+                    <div className="flex items-start space-x-2.5 flex-1 min-w-0">
+                      <img
+                        src={commentItem.user?.profileImage || 'https://via.placeholder.com/32'}
+                        alt={commentItem.user?.name}
+                        className="flex-shrink-0 object-cover w-8 h-8 rounded-full border border-gray-200 dark:border-[#262626]"
+                        onError={(e) => e.target.src = 'https://via.placeholder.com/32'}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="bg-gray-100 dark:bg-[#161616] border border-gray-200/80 dark:border-[#242424] rounded-xl px-3.5 py-2">
+                          <p className="text-xs font-bold text-gray-900 dark:text-white">
+                            {commentItem.user?.name || 'Student'}
+                          </p>
+                          <p className="text-xs text-gray-800 dark:text-zinc-300 mt-0.5 whitespace-pre-wrap">
+                            {commentItem.text}
+                          </p>
+                        </div>
+                        <p className="text-[10px] text-gray-400 dark:text-zinc-500 mt-1 pl-1">
+                          {formatDate(commentItem.createdAt)}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {formatDate(comment.createdAt)}
-                    </p>
+
+                    {canDeleteComment && (
+                      <button
+                        onClick={() => setCommentToDelete(commentItem)}
+                        className="opacity-0 group-hover/comment:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-all rounded-lg ml-2 cursor-pointer"
+                        title="Delete comment"
+                      >
+                        <TrashIcon className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -201,17 +311,143 @@ const PostCard = ({ post, onLike, onComment }) => {
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Write a comment..."
-              className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+              className="flex-1 px-4 py-2 text-sm bg-gray-50 dark:bg-[#161616] border border-gray-200 dark:border-[#262626] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={!comment.trim() || isLoading}
-              className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? 'Posting...' : 'Post'}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Delete Post Modal */}
+      {showDeletePostModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="w-full max-w-sm p-6 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] rounded-2xl shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 mx-auto bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
+              <TrashIcon className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Post?</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
+                Are you sure you want to delete this post? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex items-center space-x-3 pt-2">
+              <button
+                onClick={() => setShowDeletePostModal(false)}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-[#1A1A1A] hover:bg-gray-200 dark:hover:bg-[#242424] text-gray-700 dark:text-zinc-300 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeletePost}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 px-4 bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center cursor-pointer"
+              >
+                {isDeleting ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Comment Modal */}
+      {commentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="w-full max-w-sm p-6 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] rounded-2xl shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 mx-auto bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
+              <TrashIcon className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Comment?</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
+                Are you sure you want to delete this comment?
+              </p>
+            </div>
+            <div className="flex items-center space-x-3 pt-2">
+              <button
+                onClick={() => setCommentToDelete(null)}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-[#1A1A1A] hover:bg-gray-200 dark:hover:bg-[#242424] text-gray-700 dark:text-zinc-300 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteComment}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 px-4 bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center cursor-pointer"
+              >
+                {isDeleting ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Lightbox Modal */}
+      {selectedImageIndex !== null && post.images && post.images[selectedImageIndex] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+          {/* Lightbox Close Button */}
+          <button
+            onClick={() => setSelectedImageIndex(null)}
+            className="absolute top-5 right-5 z-50 p-2.5 text-white bg-white/10 hover:bg-white/25 backdrop-blur-md rounded-full transition-all cursor-pointer shadow-lg"
+            title="Close image"
+          >
+            <XMarkIcon className="w-6 h-6" />
+          </button>
+
+          {/* Previous Image Arrow */}
+          {post.images.length > 1 && (
+            <button
+              onClick={() => setSelectedImageIndex(prev => (prev > 0 ? prev - 1 : post.images.length - 1))}
+              className="absolute left-5 z-50 p-3 text-white bg-white/10 hover:bg-white/25 backdrop-blur-md rounded-full transition-all cursor-pointer shadow-lg"
+              title="Previous image"
+            >
+              <ChevronLeftIcon className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Expanded Image */}
+          <div className="max-w-4xl max-h-[85vh] p-2 flex items-center justify-center">
+            <img
+              src={post.images[selectedImageIndex]}
+              alt={`Full view ${selectedImageIndex + 1}`}
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+            />
+          </div>
+
+          {/* Next Image Arrow */}
+          {post.images.length > 1 && (
+            <button
+              onClick={() => setSelectedImageIndex(prev => (prev < post.images.length - 1 ? prev + 1 : 0))}
+              className="absolute right-5 z-50 p-3 text-white bg-white/10 hover:bg-white/25 backdrop-blur-md rounded-full transition-all cursor-pointer shadow-lg"
+              title="Next image"
+            >
+              <ChevronRightIcon className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Counter Badge */}
+          {post.images.length > 1 && (
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/60 backdrop-blur-md text-white text-xs font-semibold rounded-full border border-white/10">
+              {selectedImageIndex + 1} / {post.images.length}
+            </div>
+          )}
         </div>
       )}
     </div>

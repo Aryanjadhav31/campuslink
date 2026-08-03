@@ -86,15 +86,18 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setToken(null);
     setUser(null);
     delete axios.defaults.headers.common['Authorization'];
     toast.success('Logged out successfully');
   };
 
-  const updateUser = (updatedData) => {
+  const updateUser = (updatedData, notify = false) => {
     setUser(prev => ({ ...prev, ...updatedData }));
-    toast.success('Profile updated!');
+    if (notify) {
+      toast.success('Profile updated! 🎉');
+    }
   };
 
   const value = {

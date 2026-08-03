@@ -7,6 +7,7 @@ import {
   FaYoutube,
   FaGithub
 } from 'react-icons/fa';
+import Logo from '../auth/Logo';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -38,28 +39,25 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="py-12 text-white bg-gray-900">
-      <div className="container px-4 mx-auto sm:px-6 lg:px-8">
+    <footer className="py-16 text-white bg-[#000000] border-t border-[#1f1f23]">
+      <div className="container px-4 mx-auto sm:px-6 lg:px-8 max-w-[1440px]">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand Section */}
-          <div className="md:col-span-1">
-            <div className="flex items-center mb-4 space-x-2">
-              <span className="text-2xl font-bold text-blue-400">Campus</span>
-              <span className="text-2xl font-bold text-white">Link</span>
-            </div>
-            <p className="max-w-xs leading-relaxed text-gray-400">
+          <div className="md:col-span-1 space-y-4">
+            <Logo size="small" />
+            <p className="max-w-xs text-xs leading-relaxed text-zinc-400">
               A secure networking platform for college students to connect, collaborate, 
               and grow together.
             </p>
-            <div className="flex mt-4 space-x-3">
+            <div className="flex space-x-2 pt-1">
               {socialLinks.map((social) => (
                 <a
                   key={social.name}
                   href={social.href}
-                  className="p-2 text-gray-400 transition-colors bg-gray-800 rounded-lg hover:text-white hover:bg-gray-700"
+                  className="p-2 text-zinc-400 transition-colors bg-[#121212] border border-[#262626] rounded-xl hover:text-white hover:bg-[#1c1c1e]"
                   aria-label={social.name}
                 >
-                  <social.icon className="w-4 h-4" />
+                  <social.icon className="w-3.5 h-3.5" />
                 </a>
               ))}
             </div>
@@ -67,15 +65,15 @@ const Footer = () => {
 
           {/* Platform Links */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+            <h4 className="mb-4 text-xs font-semibold tracking-wider text-white uppercase">
               Platform
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {footerLinks.platform.map((link) => (
                 <li key={link.name}>
                   <Link 
                     to={link.path} 
-                    className="text-sm text-gray-400 transition-colors hover:text-white"
+                    className="text-xs text-zinc-400 transition-colors hover:text-white"
                   >
                     {link.name}
                   </Link>
@@ -86,15 +84,15 @@ const Footer = () => {
 
           {/* Support Links */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+            <h4 className="mb-4 text-xs font-semibold tracking-wider text-white uppercase">
               Support
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {footerLinks.support.map((link) => (
                 <li key={link.name}>
                   <a 
                     href={link.href} 
-                    className="text-sm text-gray-400 transition-colors hover:text-white"
+                    className="text-xs text-zinc-400 transition-colors hover:text-white"
                   >
                     {link.name}
                   </a>
@@ -105,19 +103,19 @@ const Footer = () => {
 
           {/* Newsletter Section */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+            <h4 className="mb-4 text-xs font-semibold tracking-wider text-white uppercase">
               Stay Updated
             </h4>
-            <p className="mb-4 text-sm text-gray-400">
+            <p className="mb-4 text-xs text-zinc-400">
               Subscribe to get the latest updates and events from CampusLink.
             </p>
             <div className="flex">
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-3 py-2 text-sm text-gray-900 bg-gray-800 border border-gray-700 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 text-xs text-white bg-[#121212] border border-[#262626] rounded-l-xl focus:outline-none focus:border-[#0095F6] placeholder-zinc-500"
               />
-              <button className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-r-lg hover:bg-blue-700">
+              <button className="px-4 py-2 text-xs font-semibold text-white bg-[#0095F6] rounded-r-xl hover:bg-[#1877F2] transition-colors cursor-pointer">
                 Subscribe
               </button>
             </div>
@@ -125,20 +123,20 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 mt-8 text-sm text-center text-gray-500 border-t border-gray-800">
+        <div className="pt-8 mt-12 text-xs text-center text-zinc-500 border-t border-[#1f1f23]">
           <p>
             &copy; {currentYear} CampusLink. All rights reserved.
           </p>
           <div className="flex items-center justify-center mt-2 space-x-4">
-            <a href="#" className="text-xs text-gray-500 transition-colors hover:text-gray-400">
+            <a href="#" className="text-xs text-zinc-500 transition-colors hover:text-zinc-300">
               Privacy
             </a>
-            <span className="text-gray-700">|</span>
-            <a href="#" className="text-xs text-gray-500 transition-colors hover:text-gray-400">
+            <span className="text-zinc-700">|</span>
+            <a href="#" className="text-xs text-zinc-500 transition-colors hover:text-zinc-300">
               Terms
             </a>
-            <span className="text-gray-700">|</span>
-            <a href="#" className="text-xs text-gray-500 transition-colors hover:text-gray-400">
+            <span className="text-zinc-700">|</span>
+            <a href="#" className="text-xs text-zinc-500 transition-colors hover:text-zinc-300">
               Cookies
             </a>
           </div>
@@ -148,4 +146,4 @@ const Footer = () => {
   );
 };
 
-export default Footer;
+export default Footer;

@@ -1,9 +1,20 @@
+// routes/authRoutes.js
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const { protect } = require('../middleware/auth');
+const {
+  register,
+  login,
+  getMe
+} = require('../controllers/authController');
 
-// Google Login
+// ✅ Email/Password routes
+router.post('/register', register);
+router.post('/login', login);
+
+// ✅ Google OAuth route
 router.post('/google', async (req, res) => {
   try {
     const { googleId, email, name, profileImage } = req.body;
@@ -34,6 +45,9 @@ router.post('/google', async (req, res) => {
     if (user) {
       // Update user if needed
       user.isVerified = true;
+      if (profileImage && !user.profileImage) {
+        user.profileImage = profileImage;
+      }
       await user.save();
     } else {
       // Create new user
@@ -42,7 +56,8 @@ router.post('/google', async (req, res) => {
         email: email,
         password: Math.random().toString(36).slice(-8),
         profileImage: profileImage || '',
-        isVerified: true
+        isVerified: true,
+        googleId: googleId // Add this field to your schema
       });
     }
 
@@ -66,5 +81,8 @@ router.post('/google', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// ✅ Protected route
+router.get('/me', protect, getMe);
 
 module.exports = router;

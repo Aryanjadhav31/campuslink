@@ -231,12 +231,12 @@ const Notifications = () => {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
-        <div className="overflow-hidden bg-white shadow-sm rounded-xl">
+        <div className="overflow-hidden bg-white dark:bg-[#111111] border border-gray-100 dark:border-[#1F1F1F] text-gray-900 dark:text-white shadow-sm rounded-xl">
           {/* Header */}
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200 dark:border-[#1F1F1F]">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <h2 className="text-2xl font-bold">Notifications</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h2>
                 {unreadCount > 0 && (
                   <span className="bg-blue-600 text-white text-xs px-2.5 py-1 rounded-full font-medium">
                     {unreadCount} new
@@ -246,7 +246,7 @@ const Notifications = () => {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="flex items-center text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+                  className="flex items-center text-sm font-medium text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   <CheckIcon className="w-4 h-4 mr-1" />
                   Mark all as read
@@ -258,16 +258,16 @@ const Notifications = () => {
           {/* Notifications List */}
           {notificationsArray.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="flex items-center justify-center w-20 h-20 mb-4 bg-gray-100 rounded-full">
-                <BellIcon className="w-10 h-10 text-gray-400" />
+              <div className="flex items-center justify-center w-20 h-20 mb-4 bg-gray-100 dark:bg-[#161616] rounded-full">
+                <BellIcon className="w-10 h-10 text-gray-400 dark:text-zinc-500" />
               </div>
-              <p className="text-lg font-medium text-gray-500">No notifications yet</p>
-              <p className="mt-1 text-sm text-gray-400">
+              <p className="text-lg font-medium text-gray-500 dark:text-zinc-400">No notifications yet</p>
+              <p className="mt-1 text-sm text-gray-400 dark:text-zinc-500">
                 You'll see notifications when someone interacts with you
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-[#1F1F1F]">
               {notificationsArray.map((notification) => {
                 // Skip invalid notifications
                 if (!notification || typeof notification !== 'object') return null;
@@ -278,8 +278,8 @@ const Notifications = () => {
                 return (
                   <div
                     key={notification._id || Math.random()}
-                    className={`p-4 hover:bg-gray-50 transition-all duration-200 ${
-                      isUnread ? 'bg-blue-50/30' : ''
+                    className={`p-4 hover:bg-gray-50 dark:hover:bg-[#1A1A1A] transition-all duration-200 ${
+                      isUnread ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''
                     }`}
                   >
                     <div className="flex items-start space-x-4">
@@ -303,7 +303,7 @@ const Notifications = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <p className="text-sm leading-relaxed text-gray-800">
+                            <p className="text-sm leading-relaxed text-gray-800 dark:text-zinc-200">
                               {notification.message || 'New notification'}
                             </p>
                             <div className="flex items-center mt-1 space-x-3">

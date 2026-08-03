@@ -92,51 +92,35 @@ const StatsSection = () => {
       id: 'students',
       icon: UsersIcon,
       label: 'Registered Students',
-      value: isVisible ? counts.students : 0,
       formatted: isVisible ? formatNumber(counts.students) : '0',
-      color: 'text-blue-600',
-      bg: 'from-blue-50 to-blue-100/30',
-      iconBg: 'bg-blue-100'
     },
     {
       id: 'colleges',
       icon: BuildingOfficeIcon,
       label: 'Partner Colleges',
-      value: isVisible ? counts.colleges : 0,
       formatted: isVisible ? formatNumber(counts.colleges) : '0',
-      color: 'text-indigo-600',
-      bg: 'from-indigo-50 to-indigo-100/30',
-      iconBg: 'bg-indigo-100'
     },
     {
       id: 'events',
       icon: CalendarIcon,
       label: 'Events Hosted',
-      value: isVisible ? counts.events : 0,
       formatted: isVisible ? formatNumber(counts.events) : '0',
-      color: 'text-purple-600',
-      bg: 'from-purple-50 to-purple-100/30',
-      iconBg: 'bg-purple-100'
     },
     {
       id: 'rating',
       icon: StarIcon,
       label: 'User Rating',
-      value: stats.averageRating || 4.8,
       formatted: (stats.averageRating || 4.8).toFixed(1) + '★',
-      color: 'text-yellow-600',
-      bg: 'from-yellow-50 to-yellow-100/30',
-      iconBg: 'bg-yellow-100'
     }
   ];
 
   if (loading) {
     return (
-      <section className="py-16 bg-white border-t border-gray-100">
+      <section className="py-16 bg-[#000000] border-t border-[#1f1f23]">
         <div className="container px-4 mx-auto sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="p-6 text-center bg-gray-100 rounded-2xl animate-pulse h-36"></div>
+              <div key={i} className="p-6 text-center bg-[#121212] border border-[#262626] rounded-2xl animate-pulse h-36"></div>
             ))}
           </div>
         </div>
@@ -145,21 +129,21 @@ const StatsSection = () => {
   }
 
   return (
-    <section id="stats-section" className="py-16 bg-white border-t border-gray-100">
-      <div className="container px-4 mx-auto sm:px-6 lg:px-8">
+    <section id="stats-section" className="py-16 bg-[#000000] border-t border-[#1f1f23]">
+      <div className="container px-4 mx-auto sm:px-6 lg:px-8 max-w-[1440px]">
         <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
           {statCards.map((card) => (
             <div
               key={card.id}
-              className={`p-6 text-center transition-all duration-300 bg-gradient-to-br ${card.bg} rounded-2xl hover:shadow-xl hover:-translate-y-1 group`}
+              className="p-6 text-center transition-all duration-300 bg-[#121212] border border-[#262626] rounded-2xl hover:border-[#383838]"
             >
-              <div className={`inline-flex p-3 rounded-xl ${card.iconBg} group-hover:scale-110 transition-transform duration-300`}>
-                <card.icon className={`w-6 h-6 ${card.color}`} />
+              <div className="inline-flex p-3 rounded-xl bg-[#1c1c1e] text-[#0095F6] mb-2">
+                <card.icon className="w-6 h-6" />
               </div>
-              <div className={`text-3xl md:text-4xl font-bold mt-3 ${card.color} transition-all duration-300`}>
+              <div className="text-3xl md:text-4xl font-bold mt-2 text-white">
                 {card.formatted}
               </div>
-              <div className="mt-1 text-sm font-medium text-gray-600">{card.label}</div>
+              <div className="mt-1 text-sm font-medium text-zinc-400">{card.label}</div>
             </div>
           ))}
         </div>
@@ -168,4 +152,4 @@ const StatsSection = () => {
   );
 };
 
-export default StatsSection;
+export default StatsSection;

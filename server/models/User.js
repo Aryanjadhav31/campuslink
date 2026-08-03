@@ -27,8 +27,13 @@ const userSchema = new mongoose.Schema({
   },
   year: {
     type: String,
-    enum: ['1st', '2nd', '3rd', '4th', '5th', 'Graduated'],
+    enum: ['1st', '2nd', '3rd', '4th', '5th', 'Graduated', '1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year'],
     default: '1st'
+  },
+  role: {
+    type: String,
+    enum: ['student', 'admin'],
+    default: 'student'
   },
   bio: {
     type: String,

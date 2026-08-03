@@ -7,80 +7,104 @@ import {
   ShieldCheckIcon,
   UserPlusIcon
 } from '@heroicons/react/24/outline';
+import Logo from '../auth/Logo';
 import BackgroundEffects from './BackgroundEffects';
-import ScrollIndicator from './ScrollIndicator';
-import UpcomingEvents from './UpcomingEvents';
+import IllustrationSection from '../auth/IllustrationSection';
 
 const HeroSection = () => {
   return (
-    <section className="relative flex items-center min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50/30">
+    <section className="relative flex flex-col justify-between min-h-screen overflow-hidden bg-[#000000] text-white">
       <BackgroundEffects />
 
-      <div className="container relative z-10 px-4 py-12 mx-auto sm:px-6 lg:px-8">
+      {/* Top Header Navigation */}
+      <header className="relative z-20 w-full max-w-[1440px] mx-auto px-6 py-6 flex items-center justify-between">
+        <Logo size="normal" />
+
+        <div className="flex items-center space-x-3">
+          <Link
+            to="/login"
+            className="px-5 py-2.5 text-sm font-semibold text-white bg-transparent border border-[#262626] hover:bg-[#1c1c1e] rounded-xl transition-all"
+          >
+            Sign In
+          </Link>
+          <Link
+            to="/register"
+            className="px-5 py-2.5 text-sm font-semibold text-white bg-[#0095F6] hover:bg-[#1877F2] rounded-xl transition-all"
+          >
+            Get Started
+          </Link>
+        </div>
+      </header>
+
+      {/* Hero Content */}
+      <div className="container relative z-10 px-4 py-12 mx-auto my-auto sm:px-6 lg:px-8 max-w-[1440px]">
         <div className="grid items-center grid-cols-1 gap-12 lg:grid-cols-2">
           {/* Left Content */}
-          <div className="animate-fade-in">
-            <div className="inline-flex items-center px-4 py-2 mb-6 text-sm font-medium text-blue-700 bg-blue-100 rounded-full">
-              <SparklesIcon className="w-4 h-4 mr-2" />
+          <div className="text-left space-y-6">
+            {/* Dark Theme Badge Pill */}
+            <div className="inline-flex items-center px-4 py-1.5 text-xs font-semibold text-zinc-300 bg-[#121212] border border-[#262626] rounded-full">
+              <SparklesIcon className="w-4 h-4 mr-2 text-[#0095F6]" />
               The Future of Student Networking
             </div>
 
-            <h1 className="mb-6 text-5xl font-bold leading-tight text-gray-900 sm:text-6xl lg:text-7xl">
+            {/* Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight text-white tracking-tight">
               Connect with{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
+              <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent">
                 Students
               </span>
               <br />
-              <span className="text-gray-800">Like Never Before</span>
+              Like Never Before
             </h1>
 
-            <p className="max-w-lg mb-8 text-xl leading-relaxed text-gray-600">
+            {/* Supporting Text */}
+            <p className="max-w-lg text-lg sm:text-xl font-normal leading-relaxed text-zinc-400">
               A secure networking platform for college students to connect, collaborate, 
               chat, discover events, and build professional and social relationships.
             </p>
 
-            <div className="flex flex-col gap-4 mb-8 sm:flex-row">
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white transition-all transform shadow-lg group bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl hover:from-blue-700 hover:to-indigo-700 hover:scale-105 shadow-blue-500/25 hover:shadow-blue-500/40"
+                className="inline-flex items-center justify-center px-7 py-3.5 text-sm font-semibold text-white bg-[#0095F6] hover:bg-[#1877F2] active:bg-[#0074CC] rounded-xl transition-colors cursor-pointer group"
               >
-                Get Started Free
-                <ArrowRightIcon className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
+                <span>Get Started Free</span>
+                <ArrowRightIcon className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 transition-all bg-white border border-gray-200 shadow-sm rounded-2xl hover:bg-gray-50"
+                className="inline-flex items-center justify-center px-7 py-3.5 text-sm font-semibold text-white bg-transparent border border-[#262626] hover:bg-[#1c1c1e] rounded-xl transition-colors cursor-pointer"
               >
                 Sign In
               </Link>
             </div>
 
-            <div className="flex flex-wrap gap-6">
+            {/* Inline Trust Text - Minimal icons, no colored pill cards */}
+            <div className="flex flex-wrap items-center gap-6 pt-4 text-xs sm:text-sm font-medium text-zinc-400">
               <div className="flex items-center space-x-2">
-                <CheckBadgeIcon className="w-5 h-5 text-green-500" />
-                <span className="text-sm font-medium text-gray-600">100% Free</span>
+                <CheckBadgeIcon className="w-4 h-4 text-[#0095F6]" />
+                <span>100% Free</span>
               </div>
               <div className="flex items-center space-x-2">
-                <ShieldCheckIcon className="w-5 h-5 text-green-500" />
-                <span className="text-sm font-medium text-gray-600">Secure Platform</span>
+                <ShieldCheckIcon className="w-4 h-4 text-[#0095F6]" />
+                <span>Secure Platform</span>
               </div>
               <div className="flex items-center space-x-2">
-                <UserPlusIcon className="w-5 h-5 text-green-500" />
-                <span className="text-sm font-medium text-gray-600">Verified Students</span>
+                <UserPlusIcon className="w-4 h-4 text-[#0095F6]" />
+                <span>Verified Students</span>
               </div>
             </div>
           </div>
 
-          {/* Right Content - Upcoming Events */}
-          <div className="hidden lg:block">
-            <UpcomingEvents />
+          {/* Right Content - Clean Single Mockup Illustration (No Upcoming Events card) */}
+          <div className="flex items-center justify-center">
+            <IllustrationSection />
           </div>
         </div>
       </div>
-
-      <ScrollIndicator />
     </section>
   );
 };
 
-export default HeroSection;
+export default HeroSection;

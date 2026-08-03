@@ -212,8 +212,8 @@ const CreatePost = () => {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
-        <div className="p-6 bg-white shadow-sm rounded-xl">
-          <h2 className="mb-6 text-2xl font-bold">Create Post</h2>
+        <div className="p-6 bg-white dark:bg-[#111111] border border-gray-100 dark:border-[#1F1F1F] text-gray-900 dark:text-white shadow-sm rounded-xl">
+          <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Create Post</h2>
           
           <form onSubmit={handleSubmit}>
             {/* User Info */}
@@ -221,16 +221,16 @@ const CreatePost = () => {
               <img
                 src={user?.profileImage || 'https://via.placeholder.com/40'}
                 alt={user?.name || 'User'}
-                className="object-cover w-10 h-10 border-2 border-gray-100 rounded-full"
+                className="object-cover w-10 h-10 border-2 border-gray-100 dark:border-[#262626] rounded-full"
                 onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
               />
               <div>
-                <p className="font-semibold">{user?.name || 'User'}</p>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <p className="font-semibold text-gray-900 dark:text-white">{user?.name || 'User'}</p>
+                <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-zinc-400">
                   {selectedCommunity ? (
                     <span>
                       Posting in{' '}
-                      <span className="font-medium text-blue-600">
+                      <span className="font-medium text-blue-600 dark:text-blue-400">
                         {communitiesArray.find(c => c._id === selectedCommunity)?.name || 'Community'}
                       </span>
                     </span>
@@ -247,7 +247,7 @@ const CreatePost = () => {
               onChange={(e) => setContent(e.target.value)}
               placeholder="What's on your mind?"
               rows="4"
-              className="w-full px-4 py-3 transition border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 transition rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loading}
             />
 
