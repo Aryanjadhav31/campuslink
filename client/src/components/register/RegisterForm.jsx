@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import GoogleButton from '../auth/GoogleButton';
 import Divider from '../auth/Divider';
+import Logo from '../auth/Logo';
 
 const RegisterForm = () => {
   const navigate = useNavigate();
@@ -136,12 +137,15 @@ const RegisterForm = () => {
   } focus:outline-none transition-colors`;
 
   return (
-    <div className="w-full space-y-5">
-      {/* Header */}
-      <div className="text-left">
-        <h2 className="text-xl font-bold text-white tracking-tight">
-          Create account on CampusLink
-        </h2>
+    <div className="w-full">
+      {/* Brand Header */}
+      <div className="flex flex-col items-center text-center">
+        <Logo
+          size="large"
+          layout="stacked"
+          showLink={false}
+          subtitle="Create an account to get started"
+        />
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-3 text-left">
@@ -327,7 +331,9 @@ const RegisterForm = () => {
       <Divider text="OR" />
 
       {/* Google Button */}
-      <GoogleButton isLoading={isLoading} />
+      <div className="mb-6">
+        <GoogleButton isLoading={isLoading} />
+      </div>
 
       {/* Footer Link */}
       <div className="text-center pt-3 border-t border-[#262626] text-sm text-zinc-400">

@@ -7,6 +7,7 @@ import InputField from './InputField';
 import PasswordInput from './PasswordInput';
 import GoogleButton from './GoogleButton';
 import Divider from './Divider';
+import Logo from './Logo';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -84,14 +85,17 @@ const LoginForm = () => {
 
   return (
     <div
-      className={`w-full space-y-6 transition-all duration-300 ${isShaking ? 'animate-shake' : ''
+      className={`w-full transition-all duration-300 ${isShaking ? 'animate-shake' : ''
         }`}
     >
-      {/* Form Heading */}
-      <div className="text-left">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-          Log into CampusLink
-        </h2>
+      {/* Brand Header */}
+      <div className="flex flex-col items-center text-center">
+        <Logo
+          size="large"
+          layout="stacked"
+          showLink={false}
+          subtitle="Welcome back to CampusLink"
+        />
       </div>
 
       {/* Main Login Form */}
@@ -164,7 +168,7 @@ const LoginForm = () => {
       <Divider text="OR" />
 
       {/* Secondary Action - Google Button */}
-      <div>
+      <div className="mb-6">
         <GoogleButton
           onSuccess={handleGoogleSuccess}
           onError={() => triggerShake()}
