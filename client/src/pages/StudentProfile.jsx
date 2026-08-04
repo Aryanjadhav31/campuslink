@@ -229,17 +229,19 @@ const StudentProfile = () => {
             {/* Profile Info Details */}
             <div className="flex-1 space-y-3.5 text-left w-full">
 
-              {/* 1. Username (Bold, Large) - NO gear settings icon */}
+              {/* 1. Primary Name / Username */}
               <div className="flex items-center space-x-3">
                 <h1 className="text-2xl sm:text-[28px] font-bold text-gray-900 dark:text-white tracking-tight">
-                  {profileUser.username || profileUser.name?.toLowerCase().replace(/\s+/g, '_') || 'username'}
+                  {profileUser.username || profileUser.name}
                 </h1>
               </div>
 
-              {/* 2. Full Name */}
-              <p className="text-sm font-semibold text-gray-500 dark:text-[#A8A8A8]">
-                {profileUser.name}
-              </p>
+              {/* 2. Secondary Full Name (Only when a distinct username exists) */}
+              {profileUser?.username && profileUser?.username.toLowerCase().replace(/\s+/g, '_') !== profileUser?.name?.toLowerCase().replace(/\s+/g, '_') && (
+                <p className="text-sm font-semibold text-gray-500 dark:text-[#A8A8A8]">
+                  {profileUser?.name}
+                </p>
+              )}
 
               {/* 3. College Name */}
               <p className="font-bold text-gray-900 dark:text-white text-base">

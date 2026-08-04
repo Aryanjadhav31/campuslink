@@ -130,25 +130,25 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
   };
 
   return (
-    <div className="p-6 mb-5 transition-all duration-200 bg-white dark:bg-[#111111] border border-gray-100/80 dark:border-[#1F1F1F] shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.07)] rounded-2xl relative">
+    <div className="p-4 sm:p-5 mb-4 transition-all duration-200 bg-white dark:bg-[#111111] border border-gray-100/80 dark:border-[#1F1F1F] shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.06)] rounded-2xl relative">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <Link to={`/students/${post.user?._id}`} className="relative block group">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-2.5">
+          <Link to={`/students/${post.user?._id}`} className="relative block group shrink-0">
             <div className="p-0.5 bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 rounded-full shadow-sm">
               <img
                 src={post.user?.profileImage || 'https://via.placeholder.com/40'}
                 alt={post.user?.name}
-                className="object-cover border-2 border-white dark:border-[#121212] rounded-full h-11 w-11 transition-transform group-hover:scale-105"
+                className="object-cover border-2 border-white dark:border-[#121212] rounded-full h-10 w-10 transition-transform group-hover:scale-105"
                 onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
               />
             </div>
           </Link>
-          <div>
-            <Link to={`/students/${post.user?._id}`} className="font-bold text-gray-900 dark:text-white transition-colors hover:text-blue-600">
+          <div className="min-w-0">
+            <Link to={`/students/${post.user?._id}`} className="font-bold text-base text-gray-900 dark:text-white transition-colors hover:text-blue-600 truncate block">
               {post.user?.name || 'Unknown User'}
             </Link>
-            <p className="text-xs text-gray-400 dark:text-zinc-400 font-medium">{formatDate(post.createdAt)}</p>
+            <p className="text-xs text-gray-400 dark:text-zinc-400 font-medium leading-none mt-0.5">{formatDate(post.createdAt)}</p>
           </div>
         </div>
 
@@ -156,13 +156,13 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
         <div className="relative">
           <button
             onClick={() => setShowPostMenu(!showPostMenu)}
-            className="p-2 hover:bg-gray-100/80 dark:hover:bg-[#1A1A1A] rounded-full transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-gray-100/80 dark:hover:bg-[#1A1A1A] rounded-full transition-colors cursor-pointer"
           >
             <EllipsisHorizontalIcon className="w-5 h-5 text-gray-400 dark:text-zinc-400 hover:text-gray-600 dark:hover:text-white" />
           </button>
 
           {showPostMenu && (
-            <div className="absolute right-0 top-10 z-30 w-44 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] rounded-xl shadow-2xl py-1.5 transition-all">
+            <div className="absolute right-0 top-9 z-30 w-44 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] rounded-xl shadow-2xl py-1.5 transition-all">
               {isPostOwner ? (
                 <button
                   onClick={() => {
@@ -192,10 +192,10 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
       </div>
 
       {/* Content */}
-      <p className="mb-4 text-gray-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap font-normal text-[15px]">{post.content || ''}</p>
+      <p className="mb-3 text-gray-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap font-normal text-sm sm:text-[15px]">{post.content || ''}</p>
 
       {post.images && post.images.length > 0 && (
-        <div className={`grid gap-2 mb-4 overflow-hidden rounded-xl group ${
+        <div className={`grid gap-2 mb-3 overflow-hidden rounded-2xl group ${
           post.images.length === 1 ? 'grid-cols-1' : 
           post.images.length === 2 ? 'grid-cols-2' : 
           'grid-cols-3'
@@ -204,13 +204,17 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
             <div 
               key={index} 
               onClick={() => setSelectedImageIndex(index)}
-              className="overflow-hidden rounded-xl bg-gray-100 dark:bg-[#161616] cursor-pointer relative group/img"
+              className="overflow-hidden rounded-2xl bg-gray-100 dark:bg-[#161616] cursor-pointer relative group/img shadow-sm"
             >
               <img
                 src={image}
                 alt={`Post image ${index + 1}`}
-                className={`object-cover w-full transition-transform duration-300 group-hover/img:scale-105 ${
-                  post.images.length === 1 ? 'max-h-96' : 'h-48'
+                className={`object-cover object-center w-full transition-transform duration-300 ease-out group-hover/img:scale-[1.02] ${
+                  post.images.length === 1 
+                    ? 'max-h-[240px] sm:max-h-[280px] md:max-h-[320px] lg:max-h-[360px] aspect-[16/10]' 
+                    : post.images.length === 2 
+                    ? 'h-36 sm:h-44' 
+                    : 'h-32 sm:h-40'
                 }`}
                 onError={(e) => e.target.style.display = 'none'}
               />

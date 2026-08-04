@@ -1,32 +1,159 @@
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 
-// @desc    Get all users (with filters)
+// Master engineering defaults
+const MASTER_COLLEGES = [
+  'Walchand College of Engineering, Sangli (WCE)',
+  'Government College of Engineering, Karad (GCEK)',
+  'Kolhapur Institute of Technology (KIT)',
+  "DKTE Society's Textile & Engineering Institute, Ichalkaranji",
+  'Rajarambapu Institute of Technology, Islampur (RIT)',
+  'Annasaheb Dange College of Engineering & Technology, Ashta',
+  'Padmabhooshan Vasantdada Patil Institute of Technology, Budhgaon',
+  'Ashokrao Mane Group of Institutions, Vathar',
+  'Sanjay Ghodawat University, Kolhapur',
+  'New Institute of Technology, Kolhapur'
+];
+
+const MASTER_DEPARTMENTS = [
+  'Computer Science and Engineering',
+  'Information Technology',
+  'Artificial Intelligence & Data Science',
+  'Artificial Intelligence & Machine Learning',
+  'Electronics & Telecommunication Engineering',
+  'Electrical Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Chemical Engineering',
+  'Production Engineering',
+  'Robotics and Automation',
+  'Instrumentation Engineering',
+  'Data Science',
+  'Cyber Security',
+  'Electronics Engineering'
+];
+
+const MASTER_YEARS = [
+  'First Year',
+  'Second Year',
+  'Third Year',
+  'Final Year'
+];
+
+// @desc    Get distinct filter options for Student Directory (colleges, departments, years)
+// @route   GET /api/users/filter-options
+// @access  Private
+const getFilterOptions = async (req, res) => {
+  try {
+    const dbColleges = await User.distinct('college', { role: { $ne: 'admin' }, college: { $ne: null, $ne: '' } });
+    const dbDepartments = await User.distinct('department', { role: { $ne: 'admin' }, department: { $ne: null, $ne: '' } });
+    const dbYears = await User.distinct('year', { role: { $ne: 'admin' }, year: { $ne: null, $ne: '' } });
+
+    // Merge DB values with Master Lists & remove duplicates
+    const combinedColleges = Array.from(new Set([...MASTER_COLLEGES, ...dbColleges.filter(Boolean)])).sort();
+    const combinedDepartments = Array.from(new Set([...MASTER_DEPARTMENTS, ...dbDepartments.filter(Boolean)])).sort();
+    const combinedYears = Array.from(new Set([...MASTER_YEARS, ...dbYears.filter(Boolean)])).sort();
+
+    res.json({
+      colleges: combinedColleges,
+      departments: combinedDepartments,
+      years: combinedYears
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all student users (with search, filtering, and sorting)
 // @route   GET /api/users
 // @access  Private
 const getUsers = async (req, res) => {
   try {
-    const { search, college, department, year, skill, interest } = req.query;
-    
-    let query = { _id: { $ne: req.user._id } };
+    const { search, college, department, year, skill, interest, sort } = req.query;
 
-    if (search) {
+    // Ensure all registered accounts are marked verified for directory discovery
+    await User.updateMany({ isVerified: false }, { $set: { isVerified: true } });
+
+    let query = {
+      _id: { $ne: req.user._id },
+      role: { $ne: 'admin' }
+    };
+
+    if (search && search.trim()) {
+      const term = search.trim();
+      const regex = new RegExp(term, 'i');
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { name: { $regex: regex } },
+        { username: { $regex: regex } },
+        { email: { $regex: regex } },
+        { college: { $regex: regex } },
+        { department: { $regex: regex } },
+        { skills: { $regex: regex } }
       ];
     }
 
-    if (college) query.college = college;
-    if (department) query.department = department;
-    if (year) query.year = year;
-    if (skill) query.skills = skill;
-    if (interest) query.interests = interest;
+    if (college && college.trim()) query.college = { $regex: new RegExp(college.trim(), 'i') };
+    if (department && department.trim()) query.department = { $regex: new RegExp(department.trim(), 'i') };
+
+    if (year && year.trim()) {
+      const y = year.trim();
+      if (/first|1st/i.test(y)) {
+        query.year = { $regex: /first|1st/i };
+      } else if (/second|2nd/i.test(y)) {
+        query.year = { $regex: /second|2nd/i };
+      } else if (/third|3rd/i.test(y)) {
+        query.year = { $regex: /third|3rd/i };
+      } else if (/final|fourth|4th/i.test(y)) {
+        query.year = { $regex: /final|fourth|4th|graduated/i };
+      } else {
+        query.year = { $regex: new RegExp(y, 'i') };
+      }
+    }
+
+    if (skill && skill.trim()) query.skills = { $regex: new RegExp(skill.trim(), 'i') };
+    if (interest && interest.trim()) query.interests = { $regex: new RegExp(interest.trim(), 'i') };
+
+    let sortOptions = { name: 1 }; // Default Name A-Z
+
+    if (sort === 'name_za' || sort === 'name_desc') {
+      sortOptions = { name: -1 };
+    } else if (sort === 'newest' || sort === 'recently_joined') {
+      sortOptions = { createdAt: -1 };
+    } else if (sort === 'placement' || sort === 'placement_readiness') {
+      sortOptions = { skills: -1, createdAt: -1 };
+    } else if (sort === 'active' || sort === 'most_active') {
+      sortOptions = { updatedAt: -1, createdAt: -1 };
+    } else if (sort === 'college') {
+      sortOptions = { college: 1, name: 1 };
+    } else if (sort === 'department') {
+      sortOptions = { department: 1, name: 1 };
+    } else if (sort === 'same_college') {
+      const currentUser = await User.findById(req.user._id).select('college department');
+      if (currentUser?.college) {
+        query.college = currentUser.college;
+      }
+    } else if (sort === 'same_department') {
+      const currentUser = await User.findById(req.user._id).select('college department');
+      if (currentUser?.department) {
+        query.department = currentUser.department;
+      }
+    }
 
     const users = await User.find(query)
       .select('-password')
-      .populate('friends', 'name');
-    
-    res.json(users);
+      .populate('friends', 'name profileImage')
+      .sort(sortOptions);
+
+    // Sanitize email based on privacy settings
+    const sanitizedUsers = users.map(u => {
+      const userObj = u.toObject();
+      if (userObj.settings?.privacy?.showEmail === false) {
+        delete userObj.email;
+      }
+      return userObj;
+    });
+
+    res.json(sanitizedUsers);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -40,12 +167,35 @@ const getUserById = async (req, res) => {
     const user = await User.findById(req.params.id)
       .select('-password')
       .populate('friends', 'name profileImage isOnline');
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json(user);
+    const userObj = user.toObject();
+
+    // Enforce privacy settings when viewed by others
+    if (user._id.toString() !== req.user._id.toString()) {
+      const visibility = user.settings?.privacy?.profileVisibility || 'public';
+      const isFriend = user.friends.some(f => f._id.toString() === req.user._id.toString());
+
+      if (visibility === 'private' || (visibility === 'friends' && !isFriend)) {
+        return res.status(403).json({
+          message: 'This profile is private.',
+          isPrivate: true,
+          _id: user._id,
+          name: user.name,
+          username: user.username,
+          profileImage: user.profileImage
+        });
+      }
+
+      if (user.settings?.privacy?.showEmail === false) {
+        delete userObj.email;
+      }
+    }
+
+    res.json(userObj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -56,22 +206,167 @@ const getUserById = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const { name, bio, college, department, year, skills, interests, lookingFor, socialLinks } = req.body;
+    const {
+      name,
+      username,
+      bio,
+      college,
+      department,
+      year,
+      skills,
+      interests,
+      lookingFor,
+      socialLinks,
+      location,
+      profileImage
+    } = req.body;
 
     const user = await User.findById(req.user._id);
 
-    if (name) user.name = name;
-    if (bio) user.bio = bio;
+    // Validate username uniqueness if changed
+    if (username && username.trim() !== user.username) {
+      const formattedUsername = username.trim().toLowerCase();
+      const existingUser = await User.findOne({
+        username: formattedUsername,
+        _id: { $ne: req.user._id }
+      });
+
+      if (existingUser) {
+        return res.status(400).json({ message: 'Username is already taken. Please choose another.' });
+      }
+      user.username = formattedUsername;
+    }
+
+    if (name) user.name = name.trim();
+    if (bio !== undefined) user.bio = bio;
     if (college) user.college = college;
     if (department) user.department = department;
     if (year) user.year = year;
-    if (skills) user.skills = skills;
-    if (interests) user.interests = interests;
+    if (skills !== undefined) user.skills = Array.isArray(skills) ? skills : skills.split(',').map(s => s.trim()).filter(Boolean);
+    if (interests !== undefined) user.interests = Array.isArray(interests) ? interests : interests.split(',').map(i => i.trim()).filter(Boolean);
     if (lookingFor) user.lookingFor = lookingFor;
-    if (socialLinks) user.socialLinks = socialLinks;
+    if (socialLinks) user.socialLinks = { ...user.socialLinks, ...socialLinks };
+    if (location !== undefined) user.location = location;
+    if (profileImage) user.profileImage = profileImage;
 
     const updatedUser = await user.save();
-    res.json(updatedUser);
+    const resultObj = updatedUser.toObject();
+    delete resultObj.password;
+    res.json(resultObj);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update user password (Security Tab)
+// @route   PUT /api/users/password
+// @access  Private
+const updatePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Current password is incorrect.' });
+    }
+
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({ message: 'New password cannot be the same as your current password.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+
+    await user.save();
+    res.json({ message: 'Password updated successfully! 🎉' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update privacy settings
+// @route   PUT /api/users/settings/privacy
+// @access  Private
+const updatePrivacy = async (req, res) => {
+  try {
+    const { profileVisibility, showEmail } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user.settings) user.settings = {};
+    if (!user.settings.privacy) user.settings.privacy = {};
+
+    if (profileVisibility !== undefined) {
+      user.settings.privacy.profileVisibility = profileVisibility;
+    }
+    if (showEmail !== undefined) {
+      user.settings.privacy.showEmail = Boolean(showEmail);
+    }
+
+    const updatedUser = await user.save();
+    const resultObj = updatedUser.toObject();
+    delete resultObj.password;
+    res.json(resultObj);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update notification settings
+// @route   PUT /api/users/settings/notifications
+// @access  Private
+const updateNotifications = async (req, res) => {
+  try {
+    const notificationsData = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user.settings) user.settings = {};
+
+    user.settings.notifications = {
+      ...user.settings.notifications,
+      ...notificationsData
+    };
+
+    const updatedUser = await user.save();
+    const resultObj = updatedUser.toObject();
+    delete resultObj.password;
+    res.json(resultObj);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update appearance settings (Theme)
+// @route   PUT /api/users/settings/appearance
+// @access  Private
+const updateAppearance = async (req, res) => {
+  try {
+    const { theme } = req.body;
+
+    if (!['dark', 'light', 'system'].includes(theme)) {
+      return res.status(400).json({ message: 'Invalid theme selection.' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user.settings) user.settings = {};
+    if (!user.settings.appearance) user.settings.appearance = {};
+
+    user.settings.appearance.theme = theme;
+
+    const updatedUser = await user.save();
+    const resultObj = updatedUser.toObject();
+    delete resultObj.password;
+    res.json(resultObj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -83,8 +378,7 @@ const updateProfile = async (req, res) => {
 const getSuggestions = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    
-    // Find users with similar interests, department, or college
+
     const suggestions = await User.find({
       _id: { $ne: req.user._id, $nin: user.friends },
       $or: [
@@ -93,8 +387,8 @@ const getSuggestions = async (req, res) => {
         { interests: { $in: user.interests } }
       ]
     })
-    .select('-password')
-    .limit(10);
+      .select('-password')
+      .limit(10);
 
     res.json(suggestions);
   } catch (error) {
@@ -103,8 +397,13 @@ const getSuggestions = async (req, res) => {
 };
 
 module.exports = {
+  getFilterOptions,
   getUsers,
   getUserById,
   updateProfile,
+  updatePassword,
+  updatePrivacy,
+  updateNotifications,
+  updateAppearance,
   getSuggestions
 };

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const ThemeContext = createContext();
 
@@ -23,8 +24,6 @@ export const ThemeProvider = ({ children }) => {
     const root = document.documentElement;
     const body = document.body;
 
-    console.log('🎨 ThemeContext applying theme:', theme);
-
     root.setAttribute('data-theme', theme);
     if (body) body.setAttribute('data-theme', theme);
 
@@ -43,20 +42,24 @@ export const ThemeProvider = ({ children }) => {
     }
   }, [theme]);
 
-  const toggleTheme = () => {
-    setThemeState((prevTheme) => {
-      const nextTheme = prevTheme === 'dark' ? 'light' : 'dark';
-      console.log(`🔄 Toggling theme from "${prevTheme}" to "${nextTheme}"`);
+  const toggleTheme = (showNotification = true) => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setThemeState(nextTheme);
 
-      // Sync to backend if token exists
-      const token = localStorage.getItem('token');
-      if (token) {
-        axios.put('http://localhost:5000/api/users/profile', { themePreference: nextTheme })
-          .catch(() => {});
+    if (showNotification) {
+      if (nextTheme === 'dark') {
+        notify.theme('Dark Mode Enabled', 'Applied successfully.', 'dark');
+      } else {
+        notify.theme('Light Mode Enabled', 'Applied successfully.', 'light');
       }
+    }
 
-      return nextTheme;
-    });
+    // Sync to backend if authenticated token exists
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.put('http://localhost:5000/api/users/settings/appearance', { theme: nextTheme })
+        .catch(() => { });
+    }
   };
 
   const setTheme = (newTheme) => {

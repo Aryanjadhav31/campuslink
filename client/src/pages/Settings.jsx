@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -10,13 +10,14 @@ import {
   LockClosedIcon,
   BellIcon,
   MoonIcon,
-  GlobeAltIcon,
+  SunIcon,
   ShieldCheckIcon,
   CameraIcon,
   BookmarkIcon,
   CheckCircleIcon,
   ArrowTopRightOnSquareIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  GlobeAltIcon
 } from '@heroicons/react/24/outline';
 
 // Social Media Icons for social links editing
@@ -35,13 +36,29 @@ import {
 
 const Settings = () => {
   const { user, updateUser, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   
-  const [activeTab, setActiveTab] = useState('profile');
-  const [loading, setLoading] = useState(false);
+  const initialTab = searchParams.get('tab') || location.state?.activeTab || 'profile';
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  // Tab Loading States
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+  const [savingAppearance, setSavingAppearance] = useState(false);
 
-  // Profile Edit Form State
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab') || location.state?.activeTab;
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams, location.state]);
+
+  // 1. Profile Edit Form State
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     username: user?.username || '',
@@ -49,6 +66,8 @@ const Settings = () => {
     college: user?.college || '',
     department: user?.department || '',
     year: user?.year || '1st',
+    location: user?.location || '',
+    skills: Array.isArray(user?.skills) ? user.skills.join(', ') : (user?.skills || ''),
     github: user?.socialLinks?.github || '',
     linkedin: user?.socialLinks?.linkedin || '',
     instagram: user?.socialLinks?.instagram || '',
@@ -61,7 +80,35 @@ const Settings = () => {
   const [profileImageFile, setProfileImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(user?.profileImage || null);
 
-  // Synchronize state if user object updates
+  // 2. Password Change State
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // 3. Privacy Settings State
+  const [privacy, setPrivacy] = useState({
+    profileVisibility: user?.settings?.privacy?.profileVisibility || 'public',
+    showEmail: user?.settings?.privacy?.showEmail !== false
+  });
+
+  // 4. Notification Settings State
+  const [notifications, setNotifications] = useState({
+    email: user?.settings?.notifications?.email !== false,
+    push: user?.settings?.notifications?.push !== false,
+    friendRequests: user?.settings?.notifications?.friendRequests !== false,
+    messages: user?.settings?.notifications?.messages !== false,
+    likes: user?.settings?.notifications?.likes !== false,
+    comments: user?.settings?.notifications?.comments !== false,
+    communityUpdates: user?.settings?.notifications?.communityUpdates !== false,
+    eventNotifications: user?.settings?.notifications?.eventNotifications !== false
+  });
+
+  // 5. Appearance Settings State
+  const [selectedTheme, setSelectedTheme] = useState(user?.settings?.appearance?.theme || (isDark ? 'dark' : 'light'));
+
+  // Synchronize component states when AuthContext user updates
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -71,6 +118,8 @@ const Settings = () => {
         college: user.college || '',
         department: user.department || '',
         year: user.year || '1st',
+        location: user.location || '',
+        skills: Array.isArray(user.skills) ? user.skills.join(', ') : (user.skills || ''),
         github: user.socialLinks?.github || '',
         linkedin: user.socialLinks?.linkedin || '',
         instagram: user.socialLinks?.instagram || '',
@@ -82,32 +131,31 @@ const Settings = () => {
       if (!profileImageFile) {
         setImagePreview(user.profileImage || null);
       }
+      if (user.settings?.privacy) {
+        setPrivacy({
+          profileVisibility: user.settings.privacy.profileVisibility || 'public',
+          showEmail: user.settings.privacy.showEmail !== false
+        });
+      }
+      if (user.settings?.notifications) {
+        setNotifications({
+          email: user.settings.notifications.email !== false,
+          push: user.settings.notifications.push !== false,
+          friendRequests: user.settings.notifications.friendRequests !== false,
+          messages: user.settings.notifications.messages !== false,
+          likes: user.settings.notifications.likes !== false,
+          comments: user.settings.notifications.comments !== false,
+          communityUpdates: user.settings.notifications.communityUpdates !== false,
+          eventNotifications: user.settings.notifications.eventNotifications !== false
+        });
+      }
+      if (user.settings?.appearance?.theme) {
+        setSelectedTheme(user.settings.appearance.theme);
+      }
     }
   }, [user]);
 
-  // Password Change State
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-
-  // Privacy Settings State
-  const [privacy, setPrivacy] = useState({
-    showEmail: false,
-    showCollege: true,
-    showYear: true,
-    profileVisibility: 'public'
-  });
-
-  // Notification Settings State
-  const [notifications, setNotifications] = useState({
-    friendRequests: true,
-    messages: true,
-    postInteractions: true,
-    eventReminders: true
-  });
-
+  // Handlers
   const handleProfileChange = (e) => {
     setProfileData({ ...profileData, [e.target.name]: e.target.value });
   };
@@ -115,14 +163,19 @@ const Settings = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be under 5MB');
+        return;
+      }
       setProfileImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
   };
 
+  // Submit Profile Form
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSavingProfile(true);
 
     try {
       let profileImageUrl = user?.profileImage;
@@ -130,10 +183,10 @@ const Settings = () => {
       if (profileImageFile) {
         const formDataImage = new FormData();
         formDataImage.append('image', profileImageFile);
-        const { data } = await axios.post('http://localhost:5000/api/upload/profile', formDataImage, {
+        const { data: uploadData } = await axios.post('http://localhost:5000/api/upload/profile', formDataImage, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        profileImageUrl = data.url;
+        profileImageUrl = uploadData.url;
       }
 
       const updatedPayload = {
@@ -143,6 +196,8 @@ const Settings = () => {
         college: profileData.college,
         department: profileData.department,
         year: profileData.year,
+        location: profileData.location,
+        skills: profileData.skills,
         socialLinks: {
           ...user?.socialLinks,
           github: profileData.github,
@@ -166,26 +221,91 @@ const Settings = () => {
       console.error('Update profile error:', error);
       toast.error(error.response?.data?.message || 'Failed to update profile');
     } finally {
-      setLoading(false);
+      setSavingProfile(false);
     }
   };
 
+  // Submit Password Form
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
+
+    if (!passwordData.currentPassword) {
+      toast.error('Please enter your current password');
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error('New passwords do not match!');
       return;
     }
 
+    setSavingPassword(true);
+
     try {
-      await axios.put('http://localhost:5000/api/users/change-password', {
+      const { data } = await axios.put('http://localhost:5000/api/users/password', {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
       });
-      toast.success('Password changed successfully!');
+
+      toast.success(data.message || 'Password changed successfully! 🎉');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to change password');
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
+  // Submit Privacy Settings
+  const handlePrivacySubmit = async (e) => {
+    e.preventDefault();
+    setSavingPrivacy(true);
+
+    try {
+      const { data } = await axios.put('http://localhost:5000/api/users/settings/privacy', privacy);
+      updateUser(data);
+      toast.success('Privacy preferences saved successfully! 🔒');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to save privacy settings');
+    } finally {
+      setSavingPrivacy(false);
+    }
+  };
+
+  // Submit Notification Settings
+  const handleNotificationsSubmit = async (e) => {
+    e.preventDefault();
+    setSavingNotifications(true);
+
+    try {
+      const { data } = await axios.put('http://localhost:5000/api/users/settings/notifications', notifications);
+      updateUser(data);
+      toast.success('Notification preferences saved! 🔔');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to save notification preferences');
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
+
+  // Submit Appearance Settings
+  const handleAppearanceSubmit = async (themeChoice) => {
+    const targetTheme = themeChoice || selectedTheme;
+    setSelectedTheme(targetTheme);
+    setSavingAppearance(true);
+
+    try {
+      const { data } = await axios.put('http://localhost:5000/api/users/settings/appearance', { theme: targetTheme });
+      updateUser(data);
+      setTheme(targetTheme === 'system' ? 'dark' : targetTheme);
+      toast.success(`Theme updated to ${targetTheme.toUpperCase()}! 🎨`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to save theme settings');
+    } finally {
+      setSavingAppearance(false);
     }
   };
 
@@ -208,8 +328,7 @@ const Settings = () => {
     { id: 'profile', label: 'Profile', icon: UserIcon },
     { id: 'security', label: 'Security', icon: LockClosedIcon },
     { id: 'privacy', label: 'Privacy', icon: ShieldCheckIcon },
-    { id: 'notifications', label: 'Notifications', icon: BellIcon },
-    { id: 'appearance', label: 'Appearance', icon: MoonIcon }
+    { id: 'notifications', label: 'Notifications', icon: BellIcon }
   ];
 
   return (
@@ -217,18 +336,19 @@ const Settings = () => {
       <div className="w-full flex justify-center py-6 sm:py-10">
         <main className="w-full max-w-[1000px] px-4 sm:px-8">
 
+          {/* Header Title */}
           <div className="mb-8">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
               Settings
             </h1>
             <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
-              Manage your account preferences, profile details, and theme settings
+              Manage your profile details, security preferences, privacy, and theme
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 items-start">
             
-            {/* Left Internal Settings Tab Bar */}
+            {/* Left Sidebar Tabs */}
             <div className="md:col-span-3 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] rounded-[16px] p-2 sm:p-3 shadow-sm dark:shadow-2xl">
               <nav className="space-y-1">
                 {tabs.map((tab) => {
@@ -252,7 +372,7 @@ const Settings = () => {
               </nav>
             </div>
 
-            {/* Main Content Card Panel (~32px padding, ~20px section spacing) */}
+            {/* Main Tab Content */}
             <div className="md:col-span-9 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] rounded-[16px] p-6 sm:p-8 shadow-sm dark:shadow-2xl">
               
               {/* TAB 1: PROFILE SETTINGS */}
@@ -263,14 +383,15 @@ const Settings = () => {
                       Profile Settings
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
-                      Update your personal information, bio, and social links
+                      Update your avatar, username, academic details, and portfolio
                     </p>
                   </div>
 
                   <form onSubmit={handleProfileSubmit} className="space-y-6">
-                    {/* Profile Picture Upload Section */}
+                    
+                    {/* Avatar Upload */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-3">
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-3">
                         Profile Picture
                       </label>
                       <div className="flex items-center space-x-5">
@@ -292,24 +413,24 @@ const Settings = () => {
                           </label>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Change Avatar</p>
-                          <p className="text-xs text-gray-500 dark:text-zinc-500 mt-0.5">JPG, PNG or WEBP up to 5MB</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Change Profile Picture</p>
+                          <p className="text-xs text-gray-500 dark:text-zinc-500 mt-0.5">JPG, PNG or WEBP (Max 5MB)</p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Inline Form Fields */}
+                    {/* Form Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
-                          Full Name
+                          Full Name *
                         </label>
                         <input
                           type="text"
                           name="name"
                           value={profileData.name}
                           onChange={handleProfileChange}
-                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] dark:focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 text-sm outline-none transition-all duration-200 shadow-sm"
+                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 text-sm outline-none transition-all"
                           placeholder="Your full name"
                           required
                         />
@@ -324,7 +445,7 @@ const Settings = () => {
                           name="username"
                           value={profileData.username}
                           onChange={handleProfileChange}
-                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] dark:focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 text-sm outline-none transition-all duration-200 shadow-sm"
+                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 text-sm outline-none transition-all"
                           placeholder="username"
                         />
                       </div>
@@ -338,8 +459,8 @@ const Settings = () => {
                           name="college"
                           value={profileData.college}
                           onChange={handleProfileChange}
-                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] dark:focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 text-sm outline-none transition-all duration-200 shadow-sm"
-                          placeholder="College name"
+                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 text-sm outline-none transition-all"
+                          placeholder="Campus name"
                         />
                       </div>
 
@@ -352,12 +473,12 @@ const Settings = () => {
                           name="department"
                           value={profileData.department}
                           onChange={handleProfileChange}
-                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] dark:focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 text-sm outline-none transition-all duration-200 shadow-sm"
-                          placeholder="Computer Science, Engineering..."
+                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 text-sm outline-none transition-all"
+                          placeholder="Computer Science, IT..."
                         />
                       </div>
 
-                      <div className="sm:col-span-2">
+                      <div>
                         <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                           Academic Year
                         </label>
@@ -366,17 +487,45 @@ const Settings = () => {
                             name="year"
                             value={profileData.year}
                             onChange={handleProfileChange}
-                            className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] dark:focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white text-sm outline-none transition-all duration-200 shadow-sm appearance-none cursor-pointer pr-10"
+                            className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white text-sm outline-none transition-all appearance-none cursor-pointer pr-10"
                           >
-                            <option value="1st" className="bg-white dark:bg-[#161616] text-gray-900 dark:text-white">1st Year</option>
-                            <option value="2nd" className="bg-white dark:bg-[#161616] text-gray-900 dark:text-white">2nd Year</option>
-                            <option value="3rd" className="bg-white dark:bg-[#161616] text-gray-900 dark:text-white">3rd Year</option>
-                            <option value="4th" className="bg-white dark:bg-[#161616] text-gray-900 dark:text-white">4th Year</option>
-                            <option value="5th" className="bg-white dark:bg-[#161616] text-gray-900 dark:text-white">5th Year</option>
-                            <option value="Graduated" className="bg-white dark:bg-[#161616] text-gray-900 dark:text-white">Graduated</option>
+                            <option value="1st">1st Year</option>
+                            <option value="2nd">2nd Year</option>
+                            <option value="3rd">3rd Year</option>
+                            <option value="4th">4th Year</option>
+                            <option value="5th">5th Year</option>
+                            <option value="Graduated">Graduated</option>
                           </select>
                           <ChevronDownIcon className="w-4 h-4 text-gray-400 dark:text-zinc-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
+                          Location
+                        </label>
+                        <input
+                          type="text"
+                          name="location"
+                          value={profileData.location}
+                          onChange={handleProfileChange}
+                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 text-sm outline-none transition-all"
+                          placeholder="City, Country"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
+                          Skills (Comma Separated)
+                        </label>
+                        <input
+                          type="text"
+                          name="skills"
+                          value={profileData.skills}
+                          onChange={handleProfileChange}
+                          className="w-full h-[46px] px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 text-sm outline-none transition-all"
+                          placeholder="React, Node.js, Python, Figma"
+                        />
                       </div>
 
                       <div className="sm:col-span-2">
@@ -388,13 +537,13 @@ const Settings = () => {
                           value={profileData.bio}
                           onChange={handleProfileChange}
                           rows="3"
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] dark:focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 text-sm outline-none transition-all duration-200 shadow-sm resize-none"
+                          className="w-full px-4 py-3 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 text-sm outline-none transition-all resize-none"
                           placeholder="Tell fellow students about yourself..."
                         />
                       </div>
                     </div>
 
-                    {/* Social Media Links Section */}
+                    {/* Social Media Section */}
                     <div className="pt-4 border-t border-gray-200 dark:border-[#1F1F1F] space-y-4">
                       <div>
                         <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center">
@@ -418,18 +567,6 @@ const Settings = () => {
                         ].map((field) => {
                           const Icon = field.icon;
                           const val = profileData[field.name] || '';
-                          let errorMsg = '';
-                          if (val.trim()) {
-                            const lowVal = val.trim().toLowerCase();
-                            if (field.name === 'github' && !lowVal.includes('github.com')) errorMsg = 'Must contain github.com';
-                            else if (field.name === 'linkedin' && !lowVal.includes('linkedin.com')) errorMsg = 'Must contain linkedin.com';
-                            else if (field.name === 'instagram' && !lowVal.includes('instagram.com')) errorMsg = 'Must contain instagram.com';
-                            else if (field.name === 'twitter' && !lowVal.includes('twitter.com') && !lowVal.includes('x.com')) errorMsg = 'Must contain twitter.com or x.com';
-                            else if (field.name === 'telegram' && !lowVal.includes('t.me') && !lowVal.includes('telegram.me')) errorMsg = 'Must contain t.me';
-                            else if (field.name === 'snapchat' && !lowVal.includes('snapchat.com')) errorMsg = 'Must contain snapchat.com';
-                            else if (field.name === 'portfolio' && !lowVal.startsWith('http://') && !lowVal.startsWith('https://')) errorMsg = 'Must start with http:// or https://';
-                          }
-
                           return (
                             <div key={field.name}>
                               <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5 flex items-center">
@@ -440,16 +577,9 @@ const Settings = () => {
                                 name={field.name}
                                 value={val}
                                 onChange={handleProfileChange}
-                                className={`w-full h-[42px] px-3 py-2 bg-gray-50 dark:bg-[#141414] border ${
-                                  errorMsg
-                                    ? 'border-red-500 focus:ring-red-500/20'
-                                    : 'border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20'
-                                } rounded-xl text-gray-900 dark:text-white text-xs outline-none transition-all duration-200 shadow-sm`}
+                                className="w-full h-[42px] px-3 py-2 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] hover:border-gray-400 dark:hover:border-[#383838] focus:border-[#0095F6] focus:ring-2 focus:ring-[#0095F6]/20 rounded-xl text-gray-900 dark:text-white text-xs outline-none transition-all"
                                 placeholder={field.placeholder}
                               />
-                              {errorMsg && (
-                                <p className="text-[11px] text-red-500 mt-1 font-medium">{errorMsg}</p>
-                              )}
                             </div>
                           );
                         })}
@@ -460,35 +590,16 @@ const Settings = () => {
                     <div className="pt-2">
                       <button
                         type="submit"
-                        disabled={loading}
-                        className="px-6 py-2.5 bg-[#0095F6] hover:bg-[#0081D6] text-white font-semibold text-sm rounded-xl transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 cursor-pointer flex items-center"
+                        disabled={savingProfile}
+                        className="px-6 py-2.5 bg-[#0095F6] hover:bg-[#0081D6] text-white font-semibold text-sm rounded-xl transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center space-x-2"
                       >
-                        {loading ? 'Saving Profile...' : 'Save Profile Changes'}
+                        {savingProfile && (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        )}
+                        <span>{savingProfile ? 'Saving Profile...' : 'Save Profile Changes'}</span>
                       </button>
                     </div>
                   </form>
-
-                  {/* View Archive Section */}
-                  <div className="pt-8 border-t border-gray-200 dark:border-[#1F1F1F]">
-                    <div className="bg-gray-50 dark:bg-[#161616] border border-gray-200 dark:border-[#262626] rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-                      <div>
-                        <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center">
-                          <BookmarkIcon className="w-5 h-5 mr-2 text-[#0095F6]" />
-                          View Post Archive
-                        </h3>
-                        <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1">
-                          Access your saved posts, archived content, and bookmarked publications
-                        </p>
-                      </div>
-                      <Link
-                        to="/profile?tab=saved"
-                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-[#262626] dark:hover:bg-[#333333] text-gray-900 dark:text-white text-xs font-semibold rounded-lg transition-colors flex items-center space-x-1.5 cursor-pointer"
-                      >
-                        <span>View Archive</span>
-                        <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -500,33 +611,33 @@ const Settings = () => {
                       Security Settings
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
-                      Update your password and secure your account
+                      Update your password securely with bcrypt verification
                     </p>
                   </div>
 
-                  <form onSubmit={handlePasswordChange} className="max-w-md space-y-5">
+                  <form onSubmit={handlePasswordSubmit} className="max-w-md space-y-5">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5">
-                        Current Password
+                        Current Password *
                       </label>
                       <input
                         type="password"
                         value={passwordData.currentPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0095F6]"
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0095F6]"
                         required
                       />
                     </div>
                     
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5">
-                        New Password
+                        New Password *
                       </label>
                       <input
                         type="password"
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0095F6]"
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0095F6]"
                         required
                         minLength="6"
                       />
@@ -534,23 +645,26 @@ const Settings = () => {
                     
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5">
-                        Confirm New Password
+                        Confirm New Password *
                       </label>
                       <input
                         type="password"
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0095F6]"
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#141414] border border-gray-300 dark:border-[#242424] rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0095F6]"
                         required
                       />
                     </div>
                     
                     <button
                       type="submit"
-                      disabled={loading}
-                      className="px-6 py-2.5 bg-[#0095F6] hover:bg-[#0081D6] text-white font-semibold text-sm rounded-xl transition-all shadow-md cursor-pointer disabled:opacity-50"
+                      disabled={savingPassword}
+                      className="px-6 py-2.5 bg-[#0095F6] hover:bg-[#0081D6] text-white font-semibold text-sm rounded-xl transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center space-x-2"
                     >
-                      {loading ? 'Updating Password...' : 'Change Password'}
+                      {savingPassword && (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      )}
+                      <span>{savingPassword ? 'Updating Password...' : 'Save Password'}</span>
                     </button>
                   </form>
 
@@ -580,20 +694,20 @@ const Settings = () => {
                       Privacy Preferences
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
-                      Control who can view your details and profile
+                      Control who can view your profile details and email address
                     </p>
                   </div>
 
-                  <div className="max-w-lg space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#161616] rounded-xl border border-gray-200 dark:border-[#262626]">
+                  <form onSubmit={handlePrivacySubmit} className="max-w-lg space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#141414] rounded-xl border border-gray-200 dark:border-[#242424]">
                       <div>
                         <p className="font-semibold text-sm text-gray-900 dark:text-white">Profile Visibility</p>
-                        <p className="text-xs text-gray-500 dark:text-zinc-400">Choose who can view your profile page</p>
+                        <p className="text-xs text-gray-500 dark:text-zinc-400">Control who can access your profile page</p>
                       </div>
                       <select
                         value={privacy.profileVisibility}
                         onChange={(e) => setPrivacy({ ...privacy, profileVisibility: e.target.value })}
-                        className="px-3 py-1.5 bg-white dark:bg-[#1F1F1F] border border-gray-300 dark:border-[#333333] rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0095F6]"
+                        className="px-3 py-2 bg-white dark:bg-[#1F1F1F] border border-gray-300 dark:border-[#333333] rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0095F6] cursor-pointer"
                       >
                         <option value="public">Public</option>
                         <option value="friends">Friends Only</option>
@@ -601,10 +715,10 @@ const Settings = () => {
                       </select>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#161616] rounded-xl border border-gray-200 dark:border-[#262626]">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#141414] rounded-xl border border-gray-200 dark:border-[#242424]">
                       <div>
                         <p className="font-semibold text-sm text-gray-900 dark:text-white">Display Email</p>
-                        <p className="text-xs text-gray-500 dark:text-zinc-400">Show email address on your public profile</p>
+                        <p className="text-xs text-gray-500 dark:text-zinc-400">Show email address on your public profile page</p>
                       </div>
                       <button
                         type="button"
@@ -622,12 +736,16 @@ const Settings = () => {
                     </div>
 
                     <button
-                      onClick={() => toast.success('Privacy settings saved!')}
-                      className="px-6 py-2.5 bg-[#0095F6] hover:bg-[#0081D6] text-white font-semibold text-sm rounded-xl transition-all shadow-md cursor-pointer"
+                      type="submit"
+                      disabled={savingPrivacy}
+                      className="px-6 py-2.5 bg-[#0095F6] hover:bg-[#0081D6] text-white font-semibold text-sm rounded-xl transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center space-x-2"
                     >
-                      Save Privacy Settings
+                      {savingPrivacy && (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      )}
+                      <span>{savingPrivacy ? 'Saving Privacy...' : 'Save Privacy Settings'}</span>
                     </button>
-                  </div>
+                  </form>
                 </div>
               )}
 
@@ -639,17 +757,22 @@ const Settings = () => {
                       Notification Preferences
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
-                      Choose which alerts and activities you want to receive
+                      Choose which events and activities trigger notifications
                     </p>
                   </div>
 
-                  <div className="max-w-lg space-y-4">
+                  <form onSubmit={handleNotificationsSubmit} className="max-w-lg space-y-4">
                     {[
+                      { key: 'email', title: 'Email Notifications', desc: 'Receive email alerts for important updates' },
+                      { key: 'push', title: 'Push Notifications', desc: 'Receive browser push notifications' },
                       { key: 'friendRequests', title: 'Friend Requests', desc: 'Get notified when someone sends a friend request' },
-                      { key: 'postInteractions', title: 'Post Interactions', desc: 'Alerts when someone likes or comments on your post' },
-                      { key: 'eventReminders', title: 'Event Reminders', desc: 'Reminders about upcoming campus events' }
+                      { key: 'messages', title: 'Direct Messages', desc: 'Alerts for incoming chat messages' },
+                      { key: 'likes', title: 'Post Likes', desc: 'Get notified when someone likes your post' },
+                      { key: 'comments', title: 'Post Comments', desc: 'Alerts when someone comments on your post' },
+                      { key: 'communityUpdates', title: 'Community Updates', desc: 'Notifications from joined communities' },
+                      { key: 'eventNotifications', title: 'Event Reminders', desc: 'Reminders about upcoming campus events' }
                     ].map((item) => (
-                      <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#161616] rounded-xl border border-gray-200 dark:border-[#262626]">
+                      <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#141414] rounded-xl border border-gray-200 dark:border-[#242424]">
                         <div>
                           <p className="font-semibold text-sm text-gray-900 dark:text-white">{item.title}</p>
                           <p className="text-xs text-gray-500 dark:text-zinc-400">{item.desc}</p>
@@ -671,66 +794,16 @@ const Settings = () => {
                     ))}
 
                     <button
-                      onClick={() => toast.success('Notification settings saved!')}
-                      className="px-6 py-2.5 bg-[#0095F6] hover:bg-[#0081D6] text-white font-semibold text-sm rounded-xl transition-all shadow-md cursor-pointer"
+                      type="submit"
+                      disabled={savingNotifications}
+                      className="px-6 py-2.5 bg-[#0095F6] hover:bg-[#0081D6] text-white font-semibold text-sm rounded-xl transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center space-x-2"
                     >
-                      Save Notification Settings
+                      {savingNotifications && (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      )}
+                      <span>{savingNotifications ? 'Saving Preferences...' : 'Save Notification Preferences'}</span>
                     </button>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 5: APPEARANCE (FUNCTIONAL DARK MODE TOGGLE) */}
-              {activeTab === 'appearance' && (
-                <div className="space-y-8">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                      Appearance Settings
-                    </h2>
-                    <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
-                      Customize your visual theme and interface preferences
-                    </p>
-                  </div>
-
-                  <div className="max-w-lg space-y-6">
-                    {/* Modern Toggle Switch for Dark Mode */}
-                    <div className="p-5 bg-gray-50 dark:bg-[#161616] border border-gray-200 dark:border-[#262626] rounded-xl flex items-center justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <MoonIcon className="w-5 h-5 text-[#0095F6]" />
-                          <span className="font-bold text-base text-gray-900 dark:text-white">Dark Mode</span>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-zinc-400">
-                          Switch between light and dark theme app-wide
-                        </p>
-                      </div>
-
-                      {/* Smooth Styled Toggle Switch */}
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={isDark}
-                        onClick={toggleTheme}
-                        className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0095F6] focus:ring-offset-2 dark:focus:ring-offset-[#111111] ${
-                          isDark ? 'bg-[#0095F6]' : 'bg-gray-300 dark:bg-zinc-700'
-                        }`}
-                      >
-                        <span className="sr-only">Toggle Dark Mode</span>
-                        <span
-                          className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                            isDark ? 'translate-x-7' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-600 dark:text-blue-400 flex items-center">
-                      <CheckCircleIcon className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <span>
-                        Current active theme: <strong>{isDark ? 'Dark Mode' : 'Light Mode'}</strong>. Theme is saved and automatically applied across all pages.
-                      </span>
-                    </div>
-                  </div>
+                  </form>
                 </div>
               )}
 

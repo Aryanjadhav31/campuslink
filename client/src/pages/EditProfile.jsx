@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { 
+import {
   UserIcon,
   EnvelopeIcon,
   AcademicCapIcon,
@@ -15,12 +15,12 @@ import {
 } from '@heroicons/react/24/outline';
 
 // ✅ Social Media Icons
-import { 
-  FaGithub, 
-  FaLinkedin, 
-  FaInstagram, 
-  FaSnapchat, 
-  FaTwitter, 
+import {
+  FaGithub,
+  FaLinkedin,
+  FaInstagram,
+  FaSnapchat,
+  FaTwitter,
   FaYoutube,
   FaFacebook,
   FaDiscord,
@@ -31,7 +31,7 @@ import {
 const EditProfile = () => {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
     bio: user?.bio || '',
@@ -41,12 +41,12 @@ const EditProfile = () => {
     lookingFor: user?.lookingFor || 'Networking',
     skills: user?.skills?.join(', ') || '',
     interests: user?.interests?.join(', ') || '',
-    
+
     // ✅ Professional Links
     github: user?.socialLinks?.github || '',
     linkedin: user?.socialLinks?.linkedin || '',
     portfolio: user?.socialLinks?.portfolio || '',
-    
+
     // ✅ New Social Media Links
     instagram: user?.socialLinks?.instagram || '',
     snapchat: user?.socialLinks?.snapchat || '',
@@ -57,7 +57,7 @@ const EditProfile = () => {
     telegram: user?.socialLinks?.telegram || '',
     whatsapp: user?.socialLinks?.whatsapp || ''
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(user?.profileImage || null);
@@ -80,7 +80,7 @@ const EditProfile = () => {
 
     try {
       let profileImageUrl = user?.profileImage;
-      
+
       if (profileImage) {
         const formDataImage = new FormData();
         formDataImage.append('image', profileImage);
@@ -259,7 +259,7 @@ const EditProfile = () => {
             <h2 className="text-2xl font-bold text-white">Edit Profile</h2>
             <p className="mt-1 text-blue-100">Update your personal and social media information</p>
           </div>
-          
+
           <div className="p-6">
             <form onSubmit={handleSubmit}>
               {/* Profile Image */}
@@ -296,7 +296,7 @@ const EditProfile = () => {
                   <UserIcon className="w-5 h-5 mr-2 text-blue-600" />
                   Basic Information
                 </h3>
-                
+
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className="block mb-2 text-sm font-semibold text-gray-700">Full Name</label>

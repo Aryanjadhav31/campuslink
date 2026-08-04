@@ -29,7 +29,8 @@ const register = async (req, res) => {
       password: hashedPassword,
       college,
       department,
-      year
+      year,
+      isVerified: true
     });
 
     console.log('✅ User created:', user._id);

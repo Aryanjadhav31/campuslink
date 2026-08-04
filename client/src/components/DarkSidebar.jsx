@@ -32,8 +32,7 @@ const DarkSidebar = ({ activeTab = 'profile' }) => {
     { key: 'friends', label: 'Friends', path: '/students', outlineIcon: UserGroupIcon, solidIcon: UserGroupSolid, badge: user?.pendingRequests?.length || 0 },
     { key: 'notifications', label: 'Notifications', path: '/notifications', outlineIcon: BellIcon, solidIcon: BellSolid },
     { key: 'search', label: 'Search', path: '/students', outlineIcon: MagnifyingGlassIcon, solidIcon: MagnifyingGlassIcon },
-    { key: 'create', label: 'Create Post', path: '/create-post', outlineIcon: PlusCircleIcon, solidIcon: PlusCircleIcon },
-    { key: 'profile', label: 'Profile', path: '/profile', outlineIcon: UserIcon, solidIcon: UserSolid }
+    { key: 'create', label: 'Create Post', path: '/create-post', outlineIcon: PlusCircleIcon, solidIcon: PlusCircleIcon }
   ];
 
   if (user?.role === 'admin') {
@@ -52,17 +51,17 @@ const DarkSidebar = ({ activeTab = 'profile' }) => {
   };
 
   return (
-    <aside className="fixed top-0 left-0 bottom-0 z-40 w-64 bg-white border-r border-gray-200 dark:bg-[#000000] dark:border-[#262626] flex flex-col justify-between p-5 hidden md:flex select-none font-sans transition-colors duration-200">
+    <aside className="fixed top-0 left-0 bottom-0 z-40 w-64 bg-white border-r border-gray-200 dark:bg-[#000000] dark:border-[#262626] flex flex-col justify-between p-4 hidden md:flex select-none font-sans transition-colors duration-200">
       
       {/* Top Section: Logo & Nav Items */}
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* App Logo Icon at Top */}
-        <div className="px-3 pt-2">
+        <div className="px-2 pt-1">
           <Logo size="small" showLink={true} />
         </div>
 
         {/* Vertical Navigation Items */}
-        <nav className="space-y-4">
+        <nav className="space-y-2">
           {navItems.map((item) => {
             const currentPath = location.pathname;
             let isActive = false;
@@ -70,7 +69,6 @@ const DarkSidebar = ({ activeTab = 'profile' }) => {
             else if (item.key === 'friends' && (currentPath === '/students' || currentPath.startsWith('/students/'))) isActive = true;
             else if (item.key === 'notifications' && currentPath === '/notifications') isActive = true;
             else if (item.key === 'create' && currentPath === '/create-post') isActive = true;
-            else if (item.key === 'profile' && currentPath === '/profile') isActive = true;
             else if (activeTab === item.key) isActive = true;
 
             const Icon = isActive ? item.solidIcon : item.outlineIcon;
@@ -79,14 +77,14 @@ const DarkSidebar = ({ activeTab = 'profile' }) => {
               <Link
                 key={item.key}
                 to={item.path}
-                className={`flex items-center space-x-4 px-4 py-3 rounded-[8px] transition-colors group ${
+                className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all group ${
                   isActive 
                     ? 'bg-blue-50 text-blue-600 dark:bg-[#1A1A1A] dark:text-white font-bold' 
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-[#1A1A1A] font-normal'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-[#1A1A1A] font-medium'
                 }`}
               >
                 <div className="relative flex items-center justify-center">
-                  <Icon className={`w-6 h-6 transition-transform group-hover:scale-105 ${isActive ? 'text-blue-600 dark:text-white' : 'text-gray-500 group-hover:text-gray-900 dark:text-zinc-300 dark:group-hover:text-white'}`} />
+                  <Icon className={`w-5 h-5 transition-transform group-hover:scale-105 ${isActive ? 'text-blue-600 dark:text-white' : 'text-gray-500 group-hover:text-gray-900 dark:text-zinc-300 dark:group-hover:text-white'}`} />
                   
                   {/* Notification Badge */}
                   {item.badge > 0 && (
@@ -95,7 +93,7 @@ const DarkSidebar = ({ activeTab = 'profile' }) => {
                     </span>
                   )}
                 </div>
-                <span className={`text-base tracking-tight ${isActive ? 'font-bold text-blue-600 dark:text-white' : 'text-gray-700 dark:text-zinc-200'}`}>
+                <span className={`text-sm tracking-tight ${isActive ? 'font-bold text-blue-600 dark:text-white' : 'text-gray-700 dark:text-zinc-200'}`}>
                   {item.label}
                 </span>
               </Link>

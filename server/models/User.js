@@ -27,8 +27,8 @@ const userSchema = new mongoose.Schema({
   },
   year: {
     type: String,
-    enum: ['1st', '2nd', '3rd', '4th', '5th', 'Graduated', '1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year'],
-    default: '1st'
+    enum: ['1st', '2nd', '3rd', '4th', '5th', 'Graduated', '1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year', 'First Year', 'Second Year', 'Third Year', 'Final Year'],
+    default: 'First Year'
   },
   role: {
     type: String,
@@ -55,7 +55,7 @@ const userSchema = new mongoose.Schema({
     enum: ['Study Partner', 'Project Partner', 'Mentor', 'Friends', 'Networking'],
     default: 'Networking'
   },
-  
+
   // ✅ NEW: Social Media Links
   socialLinks: {
     // Professional
@@ -105,14 +105,54 @@ const userSchema = new mongoose.Schema({
       default: ''
     }
   },
-  
+
+  username: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true
+  },
+  location: {
+    type: String,
+    default: ''
+  },
+  settings: {
+    privacy: {
+      profileVisibility: {
+        type: String,
+        enum: ['public', 'friends', 'private'],
+        default: 'public'
+      },
+      showEmail: {
+        type: Boolean,
+        default: true
+      }
+    },
+    notifications: {
+      email: { type: Boolean, default: true },
+      push: { type: Boolean, default: true },
+      likes: { type: Boolean, default: true },
+      comments: { type: Boolean, default: true },
+      messages: { type: Boolean, default: true },
+      friendRequests: { type: Boolean, default: true },
+      communityUpdates: { type: Boolean, default: true },
+      eventNotifications: { type: Boolean, default: true }
+    },
+    appearance: {
+      theme: {
+        type: String,
+        enum: ['dark', 'light', 'system'],
+        default: 'dark'
+      }
+    }
+  },
   friends: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
   isVerified: {
     type: Boolean,
-    default: false
+    default: true
   },
   isOnline: {
     type: Boolean,

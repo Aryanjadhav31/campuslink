@@ -104,10 +104,10 @@ const Profile = () => {
             {/* Profile Info Details */}
             <div className="flex-1 space-y-3.5 text-left w-full">
 
-              {/* 1. Username + Gear Settings Icon */}
+              {/* 1. Name / Username + Gear Settings Icon */}
               <div className="flex items-center space-x-3">
                 <h1 className="text-2xl sm:text-[28px] font-bold text-gray-900 dark:text-white tracking-tight">
-                  {user?.username || user?.name?.toLowerCase().replace(/\s+/g, '_') || 'username'}
+                  {user?.username || user?.name}
                 </h1>
                 <Link
                   to="/settings"
@@ -118,10 +118,12 @@ const Profile = () => {
                 </Link>
               </div>
 
-              {/* 2. Full Name */}
-              <p className="text-sm font-semibold text-gray-500 dark:text-[#A8A8A8]">
-                {user?.name}
-              </p>
+              {/* 2. Secondary Full Name (Only when a distinct username exists) */}
+              {user?.username && user?.username.toLowerCase().replace(/\s+/g, '_') !== user?.name?.toLowerCase().replace(/\s+/g, '_') && (
+                <p className="text-sm font-semibold text-gray-500 dark:text-[#A8A8A8]">
+                  {user?.name}
+                </p>
+              )}
 
               {/* 3. College Name */}
               <p className="font-bold text-gray-900 dark:text-white text-base">
