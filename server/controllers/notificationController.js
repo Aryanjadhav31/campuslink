@@ -6,15 +6,14 @@ const Notification = require('../models/Notification');
 const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ user: req.user._id })
-      .populate('from', 'name profileImage')
+      .populate('from', 'name profileImage college department username')
       .sort({ createdAt: -1 });
     
     // ✅ Always return an array
     res.json(notifications || []);
   } catch (error) {
     console.error('❌ Error fetching notifications:', error);
-    // ✅ Return empty array on error
-    res.json([]);
+    res.status(500).json({ message: error.message || 'Error fetching notifications' });
   }
 };
 

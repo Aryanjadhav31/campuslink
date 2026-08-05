@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   HeartIcon, 
@@ -16,6 +16,7 @@ import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import PostImageGrid from './PostImageGrid';
 
 const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) => {
   const { user } = useAuth();
@@ -34,6 +35,24 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
 
   // Lightbox UI State
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    if (selectedImageIndex === null) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedImageIndex(null);
+      } else if (e.key === 'ArrowLeft' && post?.images?.length > 1) {
+        setSelectedImageIndex(prev => (prev > 0 ? prev - 1 : post.images.length - 1));
+      } else if (e.key === 'ArrowRight' && post?.images?.length > 1) {
+        setSelectedImageIndex(prev => (prev < post.images.length - 1 ? prev + 1 : 0));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImageIndex, post?.images]);
 
   // Guard against missing post
   if (!post || !post._id) {
@@ -194,34 +213,8 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
       {/* Content */}
       <p className="mb-3 text-gray-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap font-normal text-sm sm:text-[15px]">{post.content || ''}</p>
 
-      {post.images && post.images.length > 0 && (
-        <div className={`grid gap-2 mb-3 overflow-hidden rounded-2xl group ${
-          post.images.length === 1 ? 'grid-cols-1' : 
-          post.images.length === 2 ? 'grid-cols-2' : 
-          'grid-cols-3'
-        }`}>
-          {post.images.map((image, index) => (
-            <div 
-              key={index} 
-              onClick={() => setSelectedImageIndex(index)}
-              className="overflow-hidden rounded-2xl bg-gray-100 dark:bg-[#161616] cursor-pointer relative group/img shadow-sm"
-            >
-              <img
-                src={image}
-                alt={`Post image ${index + 1}`}
-                className={`object-cover object-center w-full transition-transform duration-300 ease-out group-hover/img:scale-[1.02] ${
-                  post.images.length === 1 
-                    ? 'max-h-[240px] sm:max-h-[280px] md:max-h-[320px] lg:max-h-[360px] aspect-[16/10]' 
-                    : post.images.length === 2 
-                    ? 'h-36 sm:h-44' 
-                    : 'h-32 sm:h-40'
-                }`}
-                onError={(e) => e.target.style.display = 'none'}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Post Images */}
+      <PostImageGrid images={post.images} onImageClick={setSelectedImageIndex} />
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-100/80 dark:border-[#1F1F1F]">

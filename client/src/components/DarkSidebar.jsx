@@ -1,6 +1,7 @@
 import React, { useState, Fragment } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import Logo from './auth/Logo';
 import { Menu, Transition } from '@headlessui/react';
 import { 
@@ -24,13 +25,14 @@ import {
 
 const DarkSidebar = ({ activeTab = 'profile' }) => {
   const { user, logout } = useAuth();
+  const { unreadCount } = useSocket();
   const location = useLocation();
   const navigate = useNavigate();
 
   const navItems = [
     { key: 'home', label: 'Home', path: '/dashboard', outlineIcon: HomeIcon, solidIcon: HomeSolid },
-    { key: 'friends', label: 'Friends', path: '/students', outlineIcon: UserGroupIcon, solidIcon: UserGroupSolid, badge: user?.pendingRequests?.length || 0 },
-    { key: 'notifications', label: 'Notifications', path: '/notifications', outlineIcon: BellIcon, solidIcon: BellSolid },
+    { key: 'friends', label: 'Friends', path: '/students', outlineIcon: UserGroupIcon, solidIcon: UserGroupSolid },
+    { key: 'notifications', label: 'Notifications', path: '/notifications', outlineIcon: BellIcon, solidIcon: BellSolid, badge: unreadCount },
     { key: 'search', label: 'Search', path: '/students', outlineIcon: MagnifyingGlassIcon, solidIcon: MagnifyingGlassIcon },
     { key: 'create', label: 'Create Post', path: '/create-post', outlineIcon: PlusCircleIcon, solidIcon: PlusCircleIcon }
   ];

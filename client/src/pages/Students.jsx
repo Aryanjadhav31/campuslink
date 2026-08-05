@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { Link, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import api, { friends, students as studentsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { 
@@ -11,14 +11,15 @@ import {
   BuildingLibraryIcon,
   UserPlusIcon,
   CheckCircleIcon,
-  ChatBubbleLeftEllipsisIcon,
   ArrowPathIcon,
   XMarkIcon,
-  SparklesIcon
+  SparklesIcon,
+  ClockIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 
 const Students = () => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, updateUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const initialSearch = searchParams.get('search') || '';
@@ -44,17 +45,20 @@ const Students = () => {
     years: []
   });
 
-  // Friend Request Pending State Tracker
+  // Friend Request Trackers
   const [sentRequests, setSentRequests] = useState({});
+  const [incomingRequests, setIncomingRequests] = useState({});
+  const [actionLoading, setActionLoading] = useState({});
 
   // 1. Fetch Dynamic Dropdown Options from MongoDB
   useEffect(() => {
     fetchFilterOptions();
+    fetchFriendRequests();
   }, []);
 
   const fetchFilterOptions = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/users/filter-options');
+      const { data } = await studentsApi.getFilterOptions();
       setFilterOptions({
         colleges: Array.isArray(data.colleges) ? data.colleges : [],
         departments: Array.isArray(data.departments) ? data.departments : [],
@@ -62,6 +66,31 @@ const Students = () => {
       });
     } catch (error) {
       console.error('Error loading filter options:', error);
+    }
+  };
+
+  const fetchFriendRequests = async () => {
+    try {
+      const { data } = await friends.getRequests({ type: 'all' });
+      if (Array.isArray(data)) {
+        const sent = {};
+        const incoming = {};
+        data.forEach(req => {
+          if (req.status === 'pending') {
+            const senderId = req.sender._id || req.sender;
+            const receiverId = req.receiver._id || req.receiver;
+            if (senderId === currentUser?._id) {
+              sent[receiverId] = req._id;
+            } else if (receiverId === currentUser?._id) {
+              incoming[senderId] = req._id;
+            }
+          }
+        });
+        setSentRequests(sent);
+        setIncomingRequests(incoming);
+      }
+    } catch (error) {
+      console.error('Error fetching friend requests:', error);
     }
   };
 
@@ -83,22 +112,22 @@ const Students = () => {
     }
   }, [debouncedSearch, setSearchParams]);
 
-  // 4. Fetch Students based on search, filters & sorting
+  // 4. Fetch Students dynamically from MongoDB based on search, filters & sorting
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim());
-      if (filters.college) params.append('college', filters.college);
-      if (filters.department) params.append('department', filters.department);
-      if (filters.year) params.append('year', filters.year);
-      if (sortOption) params.append('sort', sortOption);
+      const params = {};
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+      if (filters.college && filters.college !== 'All Colleges') params.college = filters.college;
+      if (filters.department && filters.department !== 'All Departments') params.department = filters.department;
+      if (filters.year && filters.year !== 'All Years') params.year = filters.year;
+      if (sortOption) params.sort = sortOption;
 
-      const { data } = await axios.get(`http://localhost:5000/api/users?${params.toString()}`);
+      const { data } = await studentsApi.getAll(params);
       setStudents(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching students:', error);
-      toast.error('Failed to load students directory');
+      toast.error('Failed to load campus directory');
       setStudents([]);
     } finally {
       setLoading(false);
@@ -120,12 +149,61 @@ const Students = () => {
 
   // Send Friend Request Handler
   const handleAddFriend = async (studentId) => {
+    setActionLoading(prev => ({ ...prev, [studentId]: true }));
     try {
-      await axios.post(`http://localhost:5000/api/friends/request/${studentId}`);
-      setSentRequests(prev => ({ ...prev, [studentId]: true }));
+      const { data } = await friends.sendRequest(studentId);
+      setSentRequests(prev => ({ ...prev, [studentId]: data.friendRequest?._id || true }));
       toast.success('Friend request sent! 🚀');
     } catch (error) {
+      console.error('Error sending friend request:', error);
       toast.error(error.response?.data?.message || 'Failed to send request');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [studentId]: false }));
+    }
+  };
+
+  // Accept Friend Request Handler
+  const handleAcceptFriend = async (studentId) => {
+    const requestId = incomingRequests[studentId] || studentId;
+    setActionLoading(prev => ({ ...prev, [studentId]: true }));
+    try {
+      await friends.acceptRequest(requestId);
+      toast.success('Friend request accepted! 🎉');
+      setIncomingRequests(prev => {
+        const copy = { ...prev };
+        delete copy[studentId];
+        return copy;
+      });
+      fetchStudents();
+      if (updateUser) {
+        const updatedFriends = [...(currentUser?.friends || []), studentId];
+        updateUser({ friends: updatedFriends });
+      }
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
+      toast.error(error.response?.data?.message || 'Failed to accept request');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [studentId]: false }));
+    }
+  };
+
+  // Reject Friend Request Handler
+  const handleRejectFriend = async (studentId) => {
+    const requestId = incomingRequests[studentId] || studentId;
+    setActionLoading(prev => ({ ...prev, [studentId]: true }));
+    try {
+      await friends.rejectRequest(requestId);
+      toast.success('Friend request rejected');
+      setIncomingRequests(prev => {
+        const copy = { ...prev };
+        delete copy[studentId];
+        return copy;
+      });
+    } catch (error) {
+      console.error('Error rejecting friend request:', error);
+      toast.error(error.response?.data?.message || 'Failed to reject request');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [studentId]: false }));
     }
   };
 
@@ -150,7 +228,7 @@ const Students = () => {
 
           <div className="flex items-center space-x-3">
             {/* Student Count Badge */}
-            <span className="px-3.5 py-1.5 bg-blue-50 dark:bg-[#1A1A1A] border border-blue-200 dark:border-[#262626] text-blue-600 dark:text-blue-400 text-xs sm:text-sm font-bold rounded-full flex items-center">
+            <span className="px-4 py-1.5 bg-blue-50 dark:bg-[#1A1A1A] border border-blue-200 dark:border-[#262626] text-blue-600 dark:text-blue-400 text-xs sm:text-sm font-bold rounded-full flex items-center shadow-sm">
               <SparklesIcon className="w-4 h-4 mr-1.5 text-blue-500 animate-pulse" />
               {studentsArray.length} {studentsArray.length === 1 ? 'Student' : 'Students'} Found
             </span>
@@ -194,7 +272,7 @@ const Students = () => {
               <select
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value)}
-                className="w-full h-[42px] px-3 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] text-gray-900 dark:text-white text-xs font-semibold rounded-xl focus:border-[#0095F6] outline-none cursor-pointer"
+                className="w-full h-[46px] px-3 bg-gray-50 dark:bg-[#161616] border border-gray-300 dark:border-[#262626] text-gray-900 dark:text-white text-xs font-semibold rounded-xl focus:border-[#0095F6] outline-none cursor-pointer"
               >
                 <option value="name">Name (A–Z)</option>
                 <option value="name_desc">Name (Z–A)</option>
@@ -296,9 +374,9 @@ const Students = () => {
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-[#161616] text-gray-400 dark:text-zinc-500 rounded-full flex items-center justify-center">
               <MagnifyingGlassIcon className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">No students found.</h3>
-            <p className="mt-1.5 text-xs sm:text-sm text-gray-500 dark:text-zinc-400 max-w-md mx-auto">
-              Try changing the college, department, academic year, or search keyword.
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">No students found matching your selected filters.</h3>
+            <p className="mt-2 text-xs sm:text-sm text-gray-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
+              No students found matching your selected filters. Try changing the college, department, academic year, or search term.
             </p>
             {hasActiveFilters && (
               <button
@@ -312,8 +390,10 @@ const Students = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {studentsArray.map((student) => {
-              const isFriend = currentUser?.friends?.includes(student._id) || student.friends?.some(f => (f._id || f) === currentUser?._id);
+              const isFriend = currentUser?.friends?.some(f => (f._id || f) === student._id) || student.friends?.some(f => (f._id || f) === currentUser?._id);
               const isRequestSent = sentRequests[student._id];
+              const isIncomingRequest = incomingRequests[student._id];
+              const isLoading = actionLoading[student._id];
 
               return (
                 <div
@@ -322,7 +402,7 @@ const Students = () => {
                 >
                   <div className="space-y-4">
                     
-                    {/* Header Row: Avatar + Name + Year Badge */}
+                    {/* Header Row: Avatar + Name + Username + Verified Badge */}
                     <div className="flex items-start space-x-3.5 min-w-0">
                       <div className="relative shrink-0">
                         <img
@@ -332,7 +412,7 @@ const Students = () => {
                           onError={(e) => e.target.src = 'https://via.placeholder.com/60'}
                         />
                         {student.isVerified !== false && (
-                          <span className="absolute bottom-0 right-0 w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white ring-2 ring-white dark:ring-[#111111]" title="Verified Student">
+                          <span className="absolute bottom-0 right-0 w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white ring-2 ring-white dark:ring-[#111111] text-[10px] font-bold" title="Verified Student">
                             ✓
                           </span>
                         )}
@@ -353,7 +433,7 @@ const Students = () => {
                         </p>
 
                         <div className="mt-1 inline-flex items-center px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-md">
-                          {student.year || '1st'} Year
+                          {student.year || '1st Year'}
                         </div>
                       </div>
                     </div>
@@ -407,23 +487,50 @@ const Students = () => {
                     </Link>
 
                     {isFriend ? (
-                      <Link
-                        to="/messages"
-                        className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center justify-center shrink-0 cursor-pointer"
-                        title="Send Message"
+                      <button
+                        disabled
+                        className="py-2 px-3 bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-xl flex items-center justify-center shrink-0 cursor-default border border-emerald-500/20"
                       >
-                        <ChatBubbleLeftEllipsisIcon className="w-4 h-4 mr-1" /> Message
-                      </Link>
+                        <CheckCircleIcon className="w-4 h-4 mr-1 text-emerald-500" /> Friends
+                      </button>
                     ) : isRequestSent ? (
-                      <span className="py-2 px-3 bg-gray-200 dark:bg-[#262626] text-gray-500 dark:text-zinc-400 text-xs font-semibold rounded-xl flex items-center shrink-0">
-                        <CheckCircleIcon className="w-4 h-4 mr-1 text-emerald-400" /> Sent
-                      </span>
+                      <button
+                        disabled
+                        className="py-2 px-3 bg-gray-100 dark:bg-[#262626] text-gray-500 dark:text-zinc-400 text-xs font-semibold rounded-xl flex items-center shrink-0 cursor-default border border-gray-200 dark:border-[#333]"
+                      >
+                        <ClockIcon className="w-4 h-4 mr-1 text-amber-500" /> Request Sent
+                      </button>
+                    ) : isIncomingRequest ? (
+                      <div className="flex items-center space-x-1.5 shrink-0">
+                        <button
+                          onClick={() => handleAcceptFriend(student._id)}
+                          disabled={isLoading}
+                          className="py-2 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center cursor-pointer disabled:opacity-50"
+                          title="Accept Request"
+                        >
+                          <CheckCircleIcon className="w-4 h-4 mr-1" /> Accept
+                        </button>
+                        <button
+                          onClick={() => handleRejectFriend(student._id)}
+                          disabled={isLoading}
+                          className="py-2 px-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center cursor-pointer disabled:opacity-50"
+                          title="Reject Request"
+                        >
+                          <XCircleIcon className="w-4 h-4 mr-1" /> Reject
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={() => handleAddFriend(student._id)}
-                        className="py-2 px-3 bg-[#0095F6] hover:bg-[#0081D6] text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center shrink-0 cursor-pointer"
+                        disabled={isLoading}
+                        className="py-2 px-3 bg-[#0095F6] hover:bg-[#0081D6] text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
                       >
-                        <UserPlusIcon className="w-4 h-4 mr-1" /> Connect
+                        {isLoading ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+                        ) : (
+                          <UserPlusIcon className="w-4 h-4 mr-1" />
+                        )}
+                        <span>{isLoading ? 'Sending...' : 'Connect'}</span>
                       </button>
                     )}
                   </div>

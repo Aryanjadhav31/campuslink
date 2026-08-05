@@ -9,30 +9,41 @@ const createPost = async (req, res) => {
   try {
     const { content, images, community } = req.body;
     
-    console.log('📝 Creating post:', { content: content?.substring(0, 50), images: images?.length, community });
+    const textContent = typeof content === 'string' ? content.trim() : '';
+    const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim()) : [];
+
+    console.log('📝 Creating post request:', {
+      user: req.user._id,
+      contentLength: textContent.length,
+      imagesCount: validImages.length,
+      community
+    });
     
-    // ✅ Validate content
-    if (!content && (!images || images.length === 0)) {
-      return res.status(400).json({ message: 'Content or images required' });
+    // ✅ Production Validation Rule: Must contain text OR at least one image
+    if (!textContent && validImages.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Post must contain text or at least one image.'
+      });
     }
 
-    // ✅ Create post
+    // ✅ Create Post in MongoDB
     const post = await Post.create({
       user: req.user._id,
-      content: content || '',
-      images: images || [],
+      content: textContent,
+      images: validImages,
       community: community || null
     });
 
-    await post.populate('user', 'name profileImage');
+    await post.populate('user', 'name profileImage username');
     
-    console.log('✅ Post created:', post._id);
+    console.log('✅ Post saved to MongoDB successfully:', post._id);
     
     // ✅ If posted in community, notify members
     if (community) {
-      const communityData = await require('../models/Community').findById(community);
+      const CommunityModel = require('../models/Community');
+      const communityData = await CommunityModel.findById(community);
       if (communityData) {
-        // Notify community members
         const members = communityData.members.filter(
           memberId => memberId.toString() !== req.user._id.toString()
         );
@@ -53,7 +64,10 @@ const createPost = async (req, res) => {
     
   } catch (error) {
     console.error('❌ Create post error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create post'
+    });
   }
 };
 
@@ -62,23 +76,24 @@ const createPost = async (req, res) => {
 // @access  Private
 const getPosts = async (req, res) => {
   try {
-    const { limit = 10, page = 1 } = req.query;
+    const { limit = 20, page = 1 } = req.query;
     
-    // ✅ Get user's friends
     const user = await User.findById(req.user._id);
     const friendIds = user?.friends || [];
     
-    // ✅ Build query
+    // ✅ Feed includes: own posts, friends' posts, and public non-community posts
     const query = {
       $or: [
         { user: { $in: friendIds } },
-        { user: req.user._id }
+        { user: req.user._id },
+        { community: null },
+        { community: { $exists: false } }
       ]
     };
     
     const posts = await Post.find(query)
-      .populate('user', 'name profileImage')
-      .populate('comments.user', 'name profileImage')
+      .populate('user', 'name profileImage username college department')
+      .populate('comments.user', 'name profileImage username')
       .sort({ createdAt: -1 })
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { notifications as notificationsApi } from '../services/api';
 
 const SocketContext = createContext();
 
@@ -13,9 +14,24 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadNotifications = async () => {
+    try {
+      const { data } = await notificationsApi.getAll();
+      if (Array.isArray(data)) {
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.read).length);
+      }
+    } catch (err) {
+      console.error('Error fetching unread notifications:', err);
+    }
+  };
 
   useEffect(() => {
     if (user && token) {
+      fetchUnreadNotifications();
+
       const newSocket = io(SOCKET_URL, {
         auth: { token },
         transports: ['websocket', 'polling'],
@@ -38,10 +54,17 @@ export const SocketProvider = ({ children }) => {
         setOnlineUsers(prev => prev.filter(id => id !== userId));
       });
 
-      newSocket.on('notification', (notification) => {
-        console.log('🔔 New notification:', notification);
+      const handleNotification = (notification) => {
+        console.log('🔔 Socket Notification received:', notification);
         setNotifications(prev => [notification, ...prev]);
-      });
+        setUnreadCount(prev => prev + 1);
+      };
+
+      newSocket.on('notification', handleNotification);
+      newSocket.on('new_notification', handleNotification);
+      newSocket.on('friend_request', handleNotification);
+      newSocket.on('request_accepted', handleNotification);
+      newSocket.on('request_rejected', handleNotification);
 
       newSocket.on('disconnect', () => {
         console.log('🔌 Socket disconnected');
@@ -50,6 +73,9 @@ export const SocketProvider = ({ children }) => {
       return () => {
         newSocket.close();
       };
+    } else {
+      setNotifications([]);
+      setUnreadCount(0);
     }
   }, [user, token]);
 
@@ -57,7 +83,10 @@ export const SocketProvider = ({ children }) => {
     socket, 
     onlineUsers, 
     notifications,
-    setNotifications 
+    setNotifications,
+    unreadCount,
+    setUnreadCount,
+    fetchUnreadNotifications
   };
 
   return (

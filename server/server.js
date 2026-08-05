@@ -29,12 +29,16 @@ app.use(cors({
   credentials: true
 }));
 
+const path = require('path');
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ ROUTES - MUST be registered
 app.use('/api/auth', authRoutes);        // ✅ THIS IS REQUIRED
 app.use('/api/users', userRoutes);
+app.use('/api/students', userRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/posts', postRoutes);
@@ -50,17 +54,22 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'Server is running!' });
 });
 
+const socketHandler = require('./sockets/socketHandler');
+
 // ✅ Socket.IO
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:5173",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true
   }
 });
 
+app.set('io', io);
+
 io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
+  console.log('⚡ Client connected to Socket.io:', socket.id);
+  socketHandler(socket, io);
 });
 
 // ✅ MongoDB Connection

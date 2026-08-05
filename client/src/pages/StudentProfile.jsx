@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import PostCard from '../components/PostCard';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import axios from 'axios';
+import api, { friends, users } from '../services/api';
 import toast from 'react-hot-toast';
 import { 
   UserIcon,
@@ -66,10 +66,10 @@ const StudentProfile = () => {
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`http://localhost:5000/api/users/${id}`);
+      const { data } = await users.getById(id);
       setProfileUser(data);
       
-      const checkFriend = user?.friends?.some(f => f._id === id);
+      const checkFriend = user?.friends?.some(f => (f._id || f) === id) || data?.friends?.some(f => (f._id || f) === user?._id);
       setIsFriend(checkFriend);
     } catch (error) {
       console.error('Error fetching student profile:', error);
@@ -83,7 +83,7 @@ const StudentProfile = () => {
   const fetchStudentPosts = async () => {
     try {
       setPostsLoading(true);
-      const { data } = await axios.get('http://localhost:5000/api/posts');
+      const { data } = await api.get('/posts');
       const filtered = data.posts?.filter(p => (p.user?._id || p.user) === id) || [];
       setPosts(filtered);
     } catch (error) {
@@ -96,14 +96,16 @@ const StudentProfile = () => {
 
   const fetchFriendRequests = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/friends/requests');
-      setFriendRequests(data);
-      
-      const pendingRequest = data.find(
-        req => req.sender._id === id || req.receiver._id === id
-      );
-      if (pendingRequest) {
-        setFriendRequestStatus(pendingRequest.status);
+      const { data } = await friends.getRequests({ type: 'all' });
+      if (Array.isArray(data)) {
+        setFriendRequests(data);
+        
+        const pendingRequest = data.find(
+          req => (req.sender._id === id || req.sender === id || req.receiver._id === id || req.receiver === id) && req.status === 'pending'
+        );
+        if (pendingRequest) {
+          setFriendRequestStatus(pendingRequest.status);
+        }
       }
     } catch (error) {
       console.error('Error fetching friend requests:', error);
@@ -112,51 +114,56 @@ const StudentProfile = () => {
 
   const handleSendFriendRequest = async () => {
     try {
-      await axios.post('http://localhost:5000/api/friends/request', { receiverId: id });
-      toast.success('Friend request sent!');
+      await friends.sendRequest(id);
+      toast.success('Friend request sent! 🚀');
       setFriendRequestStatus('pending');
+      fetchFriendRequests();
     } catch (error) {
+      console.error('Error sending friend request:', error);
       toast.error(error.response?.data?.message || 'Failed to send request');
     }
   };
 
   const handleAcceptRequest = async () => {
-    const request = friendRequests.find(req => req.sender._id === id);
-    if (!request) return;
+    const request = friendRequests.find(req => (req.sender._id || req.sender) === id);
+    const requestId = request ? request._id : id;
 
     try {
-      await axios.post('http://localhost:5000/api/friends/accept', { requestId: request._id });
-      toast.success('Friend request accepted!');
+      await friends.acceptRequest(requestId);
+      toast.success('Friend request accepted! 🎉');
       setIsFriend(true);
       setFriendRequestStatus('accepted');
       fetchUserData();
     } catch (error) {
-      toast.error('Failed to accept request');
+      console.error('Error accepting friend request:', error);
+      toast.error(error.response?.data?.message || 'Failed to accept request');
     }
   };
 
   const handleRejectRequest = async () => {
-    const request = friendRequests.find(req => req.sender._id === id);
-    if (!request) return;
+    const request = friendRequests.find(req => (req.sender._id || req.sender) === id);
+    const requestId = request ? request._id : id;
 
     try {
-      await axios.post('http://localhost:5000/api/friends/reject', { requestId: request._id });
+      await friends.rejectRequest(requestId);
       toast.success('Friend request rejected');
       setFriendRequestStatus('rejected');
     } catch (error) {
-      toast.error('Failed to reject request');
+      console.error('Error rejecting friend request:', error);
+      toast.error(error.response?.data?.message || 'Failed to reject request');
     }
   };
 
   const handleRemoveFriend = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/friends/${id}`);
+      await friends.remove(id);
       toast.success('Friend removed');
       setIsFriend(false);
       setFriendRequestStatus(null);
       fetchUserData();
     } catch (error) {
-      toast.error('Failed to remove friend');
+      console.error('Error removing friend:', error);
+      toast.error(error.response?.data?.message || 'Failed to remove friend');
     }
   };
 

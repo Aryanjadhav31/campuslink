@@ -2,31 +2,46 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 
 const socketHandler = (socket, io) => {
-  console.log('New client connected:', socket.id);
+  console.log('⚡ Socket connected:', socket.id);
 
-  // User joins their room
+  // User joins their personal room
   socket.on('join', (userId) => {
-    socket.join(userId);
-    console.log(`User ${userId} joined room`);
+    if (!userId) return;
+    socket.userId = userId;
+    socket.join(userId.toString());
+    console.log(`👤 User ${userId} joined room ${userId}`);
     
     // Mark user as online
     User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: Date.now() })
       .then(() => {
         io.emit('user-online', userId);
-      });
+      })
+      .catch(err => console.error('Error setting user online:', err));
+  });
+
+  // Store user ID for disconnection
+  socket.on('set-user', (userId) => {
+    if (!userId) return;
+    socket.userId = userId;
+    socket.join(userId.toString());
   });
 
   // Handle disconnection
   socket.on('disconnect', async () => {
-    console.log('Client disconnected:', socket.id);
+    console.log('🔌 Socket disconnected:', socket.id);
     
-    // Find user by socket id and mark as offline
-    const user = await User.findOne({ _id: socket.userId });
-    if (user) {
-      user.isOnline = false;
-      user.lastSeen = Date.now();
-      await user.save();
-      io.emit('user-offline', user._id);
+    if (socket.userId) {
+      try {
+        const user = await User.findById(socket.userId);
+        if (user) {
+          user.isOnline = false;
+          user.lastSeen = Date.now();
+          await user.save();
+          io.emit('user-offline', user._id);
+        }
+      } catch (err) {
+        console.error('Error handling socket disconnect:', err);
+      }
     }
   });
 
@@ -47,13 +62,13 @@ const socketHandler = (socket, io) => {
       await newMessage.populate('receiver', 'name profileImage');
 
       // Send to receiver's room
-      io.to(receiverId).emit('new-message', newMessage);
+      io.to(receiverId.toString()).emit('new-message', newMessage);
       
       // Send back to sender
       socket.emit('message-sent', newMessage);
 
       // Send notification to receiver
-      io.to(receiverId).emit('notification', {
+      io.to(receiverId.toString()).emit('notification', {
         type: 'message',
         message: `${newMessage.sender.name} sent you a message`,
         from: socket.userId
@@ -66,10 +81,12 @@ const socketHandler = (socket, io) => {
   // Typing indicator
   socket.on('typing', (data) => {
     const { receiverId, isTyping } = data;
-    io.to(receiverId).emit('user-typing', {
-      userId: socket.userId,
-      isTyping
-    });
+    if (receiverId) {
+      io.to(receiverId.toString()).emit('user-typing', {
+        userId: socket.userId,
+        isTyping
+      });
+    }
   });
 
   // Mark message as read
@@ -82,36 +99,48 @@ const socketHandler = (socket, io) => {
       });
       
       const message = await Message.findById(messageId);
-      io.to(message.sender.toString()).emit('message-read', messageId);
+      if (message && message.sender) {
+        io.to(message.sender.toString()).emit('message-read', messageId);
+      }
     } catch (error) {
       console.error('Error marking message as read:', error);
     }
   });
 
-  // Store user ID for disconnection
-  socket.on('set-user', (userId) => {
-    socket.userId = userId;
-    socket.join(userId);
-  });
-
   // Friend request notification
   socket.on('friend-request', (data) => {
     const { receiverId, senderName } = data;
-    io.to(receiverId).emit('notification', {
-      type: 'friend_request',
-      message: `${senderName} sent you a friend request`,
-      from: socket.userId
-    });
+    if (receiverId) {
+      io.to(receiverId.toString()).emit('notification', {
+        type: 'friend_request',
+        message: `${senderName || 'Someone'} sent you a friend request`,
+        from: socket.userId
+      });
+    }
   });
 
   // Friend request accepted
   socket.on('friend-accepted', (data) => {
     const { receiverId, senderName } = data;
-    io.to(receiverId).emit('notification', {
-      type: 'friend_accept',
-      message: `${senderName} accepted your friend request`,
-      from: socket.userId
-    });
+    if (receiverId) {
+      io.to(receiverId.toString()).emit('notification', {
+        type: 'friend_accept',
+        message: `${senderName || 'Someone'} accepted your friend request`,
+        from: socket.userId
+      });
+    }
+  });
+
+  // Friend request rejected
+  socket.on('friend-rejected', (data) => {
+    const { receiverId, senderName } = data;
+    if (receiverId) {
+      io.to(receiverId.toString()).emit('notification', {
+        type: 'friend_reject',
+        message: `${senderName || 'Someone'} rejected your friend request`,
+        from: socket.userId
+      });
+    }
   });
 };
 

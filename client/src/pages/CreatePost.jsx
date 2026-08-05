@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { posts, upload, communities as communitiesApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -36,37 +36,21 @@ const CreatePost = () => {
       setError(null);
       
       console.log('📥 Fetching communities...');
-      const { data } = await axios.get('http://localhost:5000/api/communities');
+      const { data } = await communitiesApi.getAll();
       
       console.log('📋 Communities response:', data);
       
-      // ✅ CRITICAL FIX: Ensure data is an array
       let communitiesArray = [];
       if (Array.isArray(data)) {
         communitiesArray = data;
-      } else if (data && typeof data === 'object') {
-        // If API returns an object with communities array
-        if (Array.isArray(data.communities)) {
-          communitiesArray = data.communities;
-        } else {
-          // Try to extract any array from the object
-          const possibleArray = Object.values(data).find(val => Array.isArray(val));
-          if (possibleArray) {
-            communitiesArray = possibleArray;
-          } else {
-            console.warn('⚠️ Unexpected data format:', data);
-            communitiesArray = [];
-          }
-        }
-      } else {
-        console.warn('⚠️ Data is not an array:', data);
-        communitiesArray = [];
+      } else if (data && typeof data === 'object' && Array.isArray(data.communities)) {
+        communitiesArray = data.communities;
       }
       
-      // ✅ Filter communities where user is a member
+      // Filter communities where user is a member
       const userCommunities = communitiesArray.filter(community => {
         if (!community || !community.members) return false;
-        return community.members.some(m => m._id === user?._id);
+        return community.members.some(m => (m._id || m) === user?._id);
       });
       
       console.log('👥 User communities:', userCommunities);
@@ -125,94 +109,79 @@ const CreatePost = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!content.trim() && images.length === 0) {
-      toast.error('Please add some content or images');
+    const trimmedContent = content.trim();
+    if (!trimmedContent && images.length === 0) {
+      toast.error('Please add text or at least one image to post.');
       return;
     }
 
     setLoading(true);
     
     try {
-      console.log('📤 Creating post...');
+      console.log('📤 Processing post upload...');
       
-      // ✅ Upload images one by one
+      // Upload images using upload service
       const imageUrls = [];
-      for (const image of images) {
-        try {
-          const formData = new FormData();
-          formData.append('image', image.file);
-          
-          console.log('📤 Uploading image:', image.file.name);
-          const { data } = await axios.post(
-            'http://localhost:5000/api/upload/image',
-            formData,
-            {
-              headers: { 
-                'Content-Type': 'multipart/form-data',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              }
+      if (images.length > 0) {
+        for (const image of images) {
+          try {
+            console.log('📤 Uploading image file:', image.file.name);
+            const { data } = await upload.image(image.file);
+            if (data?.url) {
+              imageUrls.push(data.url);
+              console.log('✅ Image uploaded:', data.url);
             }
-          );
-          
-          console.log('✅ Image uploaded:', data.url);
-          imageUrls.push(data.url);
-        } catch (uploadError) {
-          console.error('❌ Image upload failed:', uploadError);
-          toast.error(`Failed to upload ${image.file.name}`);
-          // Continue with other images
+          } catch (uploadError) {
+            console.error('❌ Image upload error:', uploadError);
+            toast.error(`Failed to upload ${image.file.name}`);
+          }
         }
       }
 
-      // ✅ Create post
-      const postData = {
-        content: content.trim(),
+      // If user selected images but none succeeded, abort post creation
+      if (images.length > 0 && imageUrls.length === 0 && !trimmedContent) {
+        toast.error('Image upload failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // Create post payload
+      const postPayload = {
+        content: trimmedContent,
         images: imageUrls,
         community: selectedCommunity || undefined
       };
 
-      console.log('📤 Creating post with data:', postData);
+      console.log('📤 Sending post creation request:', postPayload);
       
-      const { data } = await axios.post(
-        'http://localhost:5000/api/posts',
-        postData,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+      const { data } = await posts.create(postPayload);
       
-      console.log('✅ Post created:', data);
+      console.log('✅ Post created successfully:', data);
       toast.success('Post created successfully! 🎉');
       
-      // Navigate back to dashboard
-      setTimeout(() => navigate('/dashboard'), 1000);
+      // Clear form state
+      setContent('');
+      setImages([]);
+      setSelectedCommunity('');
+      
+      // Redirect to Home Feed
+      navigate('/dashboard');
       
     } catch (error) {
       console.error('❌ Error creating post:', error);
-      
-      if (error.response) {
-        console.error('Status:', error.response.status);
-        console.error('Data:', error.response.data);
-        toast.error(error.response.data?.message || 'Failed to create post');
-      } else if (error.request) {
-        console.error('No response received');
-        toast.error('Cannot connect to server');
-      } else {
-        toast.error('Error: ' + error.message);
-      }
+      const serverMessage = error.response?.data?.message;
+      toast.error(serverMessage || 'Failed to create post. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Ensure communities is always an array
   const communitiesArray = Array.isArray(communities) ? communities : [];
 
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto">
-        <div className="p-6 bg-white dark:bg-[#111111] border border-gray-100 dark:border-[#1F1F1F] text-gray-900 dark:text-white shadow-sm rounded-xl">
+      <div className="max-w-3xl mx-auto py-6 px-4">
+        <div className="p-6 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] text-gray-900 dark:text-white shadow-sm rounded-xl">
           <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">Create Post</h2>
           
           <form onSubmit={handleSubmit}>
@@ -221,7 +190,7 @@ const CreatePost = () => {
               <img
                 src={user?.profileImage || 'https://via.placeholder.com/40'}
                 alt={user?.name || 'User'}
-                className="object-cover w-10 h-10 border-2 border-gray-100 dark:border-[#262626] rounded-full"
+                className="object-cover w-10 h-10 border-2 border-gray-200 dark:border-[#262626] rounded-full"
                 onError={(e) => e.target.src = 'https://via.placeholder.com/40'}
               />
               <div>
@@ -241,7 +210,7 @@ const CreatePost = () => {
               </div>
             </div>
 
-            {/* Content */}
+            {/* Content Textarea */}
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -251,20 +220,20 @@ const CreatePost = () => {
               disabled={loading}
             />
 
-            {/* Image Preview */}
+            {/* Image Previews */}
             {images.length > 0 && (
               <div className="grid grid-cols-2 gap-2 mt-4 sm:grid-cols-3">
                 {images.map((image) => (
-                  <div key={image.id} className="relative group">
+                  <div key={image.id} className="relative group aspect-square bg-[#111111] rounded-[16px] overflow-hidden border border-gray-200/50 dark:border-[#1F1F1F]">
                     <img
                       src={image.preview}
-                      alt="Upload"
-                      className="object-cover w-full h-32 border border-gray-200 rounded-lg"
+                      alt="Upload Preview"
+                      className="w-full h-full object-contain p-1 rounded-[16px]"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(image.id)}
-                      className="absolute p-1 text-white transition-colors bg-red-600 rounded-full opacity-0 top-1 right-1 hover:bg-red-700 group-hover:opacity-100"
+                      className="absolute p-1.5 text-white transition-colors bg-red-600/90 hover:bg-red-600 rounded-full opacity-90 sm:opacity-0 sm:group-hover:opacity-100 top-2 right-2 cursor-pointer shadow-md"
                       disabled={loading}
                     >
                       <XMarkIcon className="w-4 h-4" />
@@ -274,11 +243,11 @@ const CreatePost = () => {
               </div>
             )}
 
-            {/* Actions */}
+            {/* Post Option Controls */}
             <div className="flex flex-wrap items-center gap-2 mt-4">
               <label className="cursor-pointer">
-                <span className="flex items-center px-4 py-2 text-gray-700 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200">
-                  <PhotoIcon className="w-5 h-5 mr-2" />
+                <span className="flex items-center px-4 py-2 text-gray-700 dark:text-zinc-300 transition-colors bg-gray-100 dark:bg-[#1A1A1A] hover:bg-gray-200 dark:hover:bg-[#262626] rounded-lg text-sm font-medium">
+                  <PhotoIcon className="w-5 h-5 mr-2 text-blue-500" />
                   Add Images
                 </span>
                 <input
@@ -294,26 +263,26 @@ const CreatePost = () => {
               <button
                 type="button"
                 onClick={() => setShowCommunitySelect(!showCommunitySelect)}
-                className="flex items-center px-4 py-2 text-gray-700 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="flex items-center px-4 py-2 text-gray-700 dark:text-zinc-300 transition-colors bg-gray-100 dark:bg-[#1A1A1A] hover:bg-gray-200 dark:hover:bg-[#262626] rounded-lg text-sm font-medium cursor-pointer"
                 disabled={loading}
               >
                 {selectedCommunity ? (
-                  <UsersIcon className="w-5 h-5 mr-2" />
+                  <UsersIcon className="w-5 h-5 mr-2 text-blue-500" />
                 ) : (
-                  <GlobeAltIcon className="w-5 h-5 mr-2" />
+                  <GlobeAltIcon className="w-5 h-5 mr-2 text-emerald-500" />
                 )}
                 {selectedCommunity ? 'Community Post' : 'Public Post'}
               </button>
 
               {showCommunitySelect && (
-                <div className="w-full p-2 mt-2 overflow-y-auto border border-gray-200 rounded-lg bg-gray-50 max-h-48">
+                <div className="w-full p-2 mt-2 overflow-y-auto border border-gray-200 dark:border-[#262626] rounded-lg bg-gray-50 dark:bg-[#161616] max-h-48">
                   {fetchingCommunities ? (
                     <div className="py-4 text-center">
                       <div className="w-6 h-6 mx-auto border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
-                      <p className="mt-2 text-sm text-gray-500">Loading communities...</p>
+                      <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">Loading communities...</p>
                     </div>
                   ) : communitiesArray.length === 0 ? (
-                    <p className="py-2 text-sm text-center text-gray-500">
+                    <p className="py-2 text-sm text-center text-gray-500 dark:text-zinc-400">
                       No communities joined yet
                     </p>
                   ) : (
@@ -324,8 +293,8 @@ const CreatePost = () => {
                           setSelectedCommunity('');
                           setShowCommunitySelect(false);
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                          !selectedCommunity ? 'bg-blue-50 text-blue-700' : ''
+                        className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#222] transition-colors ${
+                          !selectedCommunity ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : ''
                         }`}
                       >
                         <GlobeAltIcon className="inline w-4 h-4 mr-2" />
@@ -339,13 +308,13 @@ const CreatePost = () => {
                             setSelectedCommunity(community._id);
                             setShowCommunitySelect(false);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                            selectedCommunity === community._id ? 'bg-blue-50 text-blue-700' : ''
+                          className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#222] transition-colors ${
+                            selectedCommunity === community._id ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : ''
                           }`}
                         >
                           <UsersIcon className="inline w-4 h-4 mr-2" />
                           {community.name}
-                          <span className="ml-2 text-xs text-gray-400">
+                          <span className="ml-2 text-xs text-gray-400 dark:text-zinc-500">
                             ({community.members?.length || 0} members)
                           </span>
                         </button>
@@ -356,12 +325,12 @@ const CreatePost = () => {
               )}
             </div>
 
-            {/* Submit */}
+            {/* Submit Actions */}
             <div className="flex mt-6 space-x-3">
               <button
                 type="submit"
                 disabled={loading || (!content.trim() && images.length === 0)}
-                className="flex-1 px-4 py-2 font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-md"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
@@ -378,7 +347,7 @@ const CreatePost = () => {
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="flex-1 px-4 py-2 font-medium text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300"
+                className="flex-1 px-4 py-2.5 font-medium text-gray-700 dark:text-zinc-300 transition-colors bg-gray-200 dark:bg-[#1A1A1A] hover:bg-gray-300 dark:hover:bg-[#262626] rounded-lg cursor-pointer"
                 disabled={loading}
               >
                 Cancel

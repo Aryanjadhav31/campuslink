@@ -1,6 +1,8 @@
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const { Readable } = require('stream');
+const fs = require('fs');
+const path = require('path');
 
 // ✅ Configure Cloudinary
 cloudinary.config({
@@ -13,7 +15,6 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  // Accept images only
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
   } else {
@@ -30,33 +31,68 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
-// ✅ Helper function to upload to Cloudinary
-const uploadToCloudinary = (buffer, options = {}) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: 'campuslink',
-        ...options
-      },
-      (error, result) => {
-        if (error) {
-          console.error('❌ Cloudinary upload error:', error);
-          reject(error);
-        } else {
-          resolve(result);
-        }
-      }
-    );
+// ✅ Save file locally as fallback
+const saveFileLocally = async (fileBuffer, originalName) => {
+  const uploadsDir = path.join(__dirname, '../uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
 
-    const readable = new Readable({
-      read() {
-        this.push(buffer);
-        this.push(null);
-      }
-    });
+  const ext = path.extname(originalName) || '.jpg';
+  const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}${ext}`;
+  const filePath = path.join(uploadsDir, fileName);
 
-    readable.pipe(stream);
-  });
+  await fs.promises.writeFile(filePath, fileBuffer);
+  return `http://localhost:${process.env.PORT || 5000}/uploads/${fileName}`;
+};
+
+// ✅ Helper function to upload to Cloudinary with Local Fallback
+const processImageUpload = async (file, options = {}) => {
+  const isCloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
+
+  if (isCloudinaryConfigured) {
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'campuslink',
+            transformation: [
+              { width: 1200, crop: 'limit' },
+              { quality: 'auto' }
+            ],
+            ...options
+          },
+          (error, res) => {
+            if (error) reject(error);
+            else resolve(res);
+          }
+        );
+
+        const readable = new Readable({
+          read() {
+            this.push(file.buffer);
+            this.push(null);
+          }
+        });
+
+        readable.pipe(stream);
+      });
+
+      return {
+        url: result.secure_url,
+        publicId: result.public_id
+      };
+    } catch (cloudinaryError) {
+      console.warn('⚠️ Cloudinary upload failed, falling back to local storage:', cloudinaryError.message);
+    }
+  }
+
+  // Fallback to local storage
+  const localUrl = await saveFileLocally(file.buffer, file.originalname);
+  return {
+    url: localUrl,
+    publicId: null
+  };
 };
 
 // @desc    Upload single image
@@ -73,18 +109,13 @@ const uploadImage = async (req, res) => {
 
     console.log('📄 File:', req.file.originalname, req.file.size, 'bytes');
 
-    const result = await uploadToCloudinary(req.file.buffer, {
-      transformation: [
-        { width: 1200, crop: 'limit' },
-        { quality: 'auto' }
-      ]
-    });
+    const result = await processImageUpload(req.file);
 
-    console.log('✅ Image uploaded:', result.secure_url);
+    console.log('✅ Image processed successfully:', result.url);
 
     res.json({
-      url: result.secure_url,
-      publicId: result.public_id
+      url: result.url,
+      publicId: result.publicId
     });
     
   } catch (error) {
@@ -108,27 +139,14 @@ const uploadMultipleImages = async (req, res) => {
       return res.status(400).json({ message: 'No images uploaded' });
     }
 
-    console.log(`📄 Uploading ${req.files.length} images`);
+    console.log(`📄 Processing ${req.files.length} images`);
 
-    const uploadPromises = req.files.map(file => 
-      uploadToCloudinary(file.buffer, {
-        transformation: [
-          { width: 1200, crop: 'limit' },
-          { quality: 'auto' }
-        ]
-      })
-    );
-
+    const uploadPromises = req.files.map(file => processImageUpload(file));
     const results = await Promise.all(uploadPromises);
-    
-    const imageUrls = results.map(result => ({
-      url: result.secure_url,
-      publicId: result.public_id
-    }));
 
-    console.log(`✅ ${imageUrls.length} images uploaded`);
+    console.log(`✅ ${results.length} images processed`);
 
-    res.json(imageUrls);
+    res.json(results);
     
   } catch (error) {
     console.error('❌ Upload error:', error);
@@ -153,25 +171,19 @@ const uploadProfileImage = async (req, res) => {
 
     console.log('📄 File:', req.file.originalname, req.file.size, 'bytes');
 
-    const result = await uploadToCloudinary(req.file.buffer, {
-      folder: 'campuslink/profiles',
-      transformation: [
-        { width: 400, height: 400, crop: 'fill' },
-        { quality: 'auto' }
-      ]
-    });
+    const result = await processImageUpload(req.file, { folder: 'campuslink/profiles' });
 
-    // ✅ Update user's profile image
+    // Update user profile image
     const User = require('../models/User');
     await User.findByIdAndUpdate(req.user._id, {
-      profileImage: result.secure_url
+      profileImage: result.url
     });
 
-    console.log('✅ Profile image uploaded:', result.secure_url);
+    console.log('✅ Profile image updated:', result.url);
 
     res.json({
-      url: result.secure_url,
-      publicId: result.public_id
+      url: result.url,
+      publicId: result.publicId
     });
     
   } catch (error) {

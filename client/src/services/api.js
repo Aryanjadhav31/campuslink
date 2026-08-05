@@ -60,11 +60,16 @@ export const users = {
   getSuggestions: () => api.get('/users/suggestions'),
 };
 
+export const students = {
+  getAll: (params) => api.get('/students', { params }),
+  getFilterOptions: () => api.get('/students/filter-options'),
+};
+
 export const friends = {
-  sendRequest: (receiverId) => api.post('/friends/request', { receiverId }),
-  acceptRequest: (requestId) => api.post('/friends/accept', { requestId }),
-  rejectRequest: (requestId) => api.post('/friends/reject', { requestId }),
-  getRequests: () => api.get('/friends/requests'),
+  sendRequest: (receiverId) => api.post(`/friends/request/${receiverId}`, { receiverId }),
+  acceptRequest: (id) => api.post(`/friends/accept/${id}`, { requestId: id }),
+  rejectRequest: (id) => api.post(`/friends/reject/${id}`, { requestId: id }),
+  getRequests: (params) => api.get('/friends/requests', { params }),
   getFriends: () => api.get('/friends'),
   remove: (friendId) => api.delete(`/friends/${friendId}`),
 };
@@ -101,8 +106,8 @@ export const events = {
 
 export const notifications = {
   getAll: () => api.get('/notifications'),
-  markAsRead: (id) => api.put(`/notifications/${id}/read`),
-  markAllAsRead: () => api.put('/notifications/read-all'),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch('/notifications/read-all'),
   delete: (id) => api.delete(`/notifications/${id}`),
 };
 

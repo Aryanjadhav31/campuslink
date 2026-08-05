@@ -64,12 +64,16 @@ const getFilterOptions = async (req, res) => {
   }
 };
 
+const escapeRegex = (string) => {
+  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+};
+
 // @desc    Get all student users (with search, filtering, and sorting)
-// @route   GET /api/users
+// @route   GET /api/users or GET /api/students
 // @access  Private
 const getUsers = async (req, res) => {
   try {
-    const { search, college, department, year, skill, interest, sort } = req.query;
+    const { search, college, department, year, academicYear, skill, interest, sort } = req.query;
 
     // Ensure all registered accounts are marked verified for directory discovery
     await User.updateMany({ isVerified: false }, { $set: { isVerified: true } });
@@ -79,9 +83,39 @@ const getUsers = async (req, res) => {
       role: { $ne: 'admin' }
     };
 
+    // 1. Dynamic College Filter
+    if (college && college.trim() && college !== 'All Colleges') {
+      const c = college.trim();
+      query.college = { $regex: new RegExp(escapeRegex(c), 'i') };
+    }
+
+    // 2. Dynamic Department Filter
+    if (department && department.trim() && department !== 'All Departments') {
+      const d = department.trim();
+      query.department = { $regex: new RegExp(escapeRegex(d), 'i') };
+    }
+
+    // 3. Dynamic Academic Year Filter
+    const targetYear = year || academicYear;
+    if (targetYear && targetYear.trim() && targetYear !== 'All Years') {
+      const y = targetYear.trim();
+      if (/first|1st/i.test(y)) {
+        query.year = { $regex: /first|1st/i };
+      } else if (/second|2nd/i.test(y)) {
+        query.year = { $regex: /second|2nd/i };
+      } else if (/third|3rd/i.test(y)) {
+        query.year = { $regex: /third|3rd/i };
+      } else if (/final|fourth|4th/i.test(y)) {
+        query.year = { $regex: /final|fourth|4th|graduated/i };
+      } else {
+        query.year = { $regex: new RegExp(escapeRegex(y), 'i') };
+      }
+    }
+
+    // 4. Dynamic Search Filter (Name, Username, Email, College, Department, Skills)
     if (search && search.trim()) {
-      const term = search.trim();
-      const regex = new RegExp(term, 'i');
+      const s = search.trim();
+      const regex = new RegExp(escapeRegex(s), 'i');
       query.$or = [
         { name: { $regex: regex } },
         { username: { $regex: regex } },
@@ -92,26 +126,8 @@ const getUsers = async (req, res) => {
       ];
     }
 
-    if (college && college.trim()) query.college = { $regex: new RegExp(college.trim(), 'i') };
-    if (department && department.trim()) query.department = { $regex: new RegExp(department.trim(), 'i') };
-
-    if (year && year.trim()) {
-      const y = year.trim();
-      if (/first|1st/i.test(y)) {
-        query.year = { $regex: /first|1st/i };
-      } else if (/second|2nd/i.test(y)) {
-        query.year = { $regex: /second|2nd/i };
-      } else if (/third|3rd/i.test(y)) {
-        query.year = { $regex: /third|3rd/i };
-      } else if (/final|fourth|4th/i.test(y)) {
-        query.year = { $regex: /final|fourth|4th|graduated/i };
-      } else {
-        query.year = { $regex: new RegExp(y, 'i') };
-      }
-    }
-
-    if (skill && skill.trim()) query.skills = { $regex: new RegExp(skill.trim(), 'i') };
-    if (interest && interest.trim()) query.interests = { $regex: new RegExp(interest.trim(), 'i') };
+    if (skill && skill.trim()) query.skills = { $regex: new RegExp(escapeRegex(skill.trim()), 'i') };
+    if (interest && interest.trim()) query.interests = { $regex: new RegExp(escapeRegex(interest.trim()), 'i') };
 
     let sortOptions = { name: 1 }; // Default Name A-Z
 
