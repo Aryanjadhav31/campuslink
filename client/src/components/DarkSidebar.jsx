@@ -105,7 +105,7 @@ const DarkSidebar = ({ activeTab = 'profile' }) => {
         </nav>
       </div>
 
-      {/* Bottom Section: "More" Menu & App Branding */}
+      {/* Bottom Section: "More" Menu */}
       <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-[#262626]">
         
         {/* More Menu Dropdown */}
@@ -150,11 +150,6 @@ const DarkSidebar = ({ activeTab = 'profile' }) => {
             </Menu.Items>
           </Transition>
         </Menu>
-
-        {/* App Branding Line */}
-        <div className="px-4 text-xs text-gray-400 dark:text-zinc-500 font-medium tracking-tight">
-          © 2026 CampusLink from Student Network
-        </div>
 
       </div>
     </aside>
