@@ -6,6 +6,7 @@ import { EyeIcon, EyeSlashIcon, CheckCircleIcon } from '@heroicons/react/24/outl
 import GoogleButton from '../auth/GoogleButton';
 import Divider from '../auth/Divider';
 import Logo from '../auth/Logo';
+import { APPROVED_COLLEGES } from '../../constants/colleges';
 
 const RegisterForm = () => {
   const navigate = useNavigate();
@@ -27,17 +28,7 @@ const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const colleges = [
-    'Walchand College of Engineering',
-    'Government College of Engineering, Karad',
-    "Kolhapur Institute of Technology's College of Engineering",
-    "DKTE Society's Textile & Engineering Institute",
-    'Rajarambapu Institute of Technology',
-    'Annasaheb Dange College of Engineering & Technology',
-    'Padmabhooshan Vasantdada Patil Institute of Technology',
-    'Ashokrao Mane Group of Institutions',
-    'Sanjay Ghodawat University'
-  ];
+  const colleges = APPROVED_COLLEGES;
 
   const departments = [
     'Computer Science and Engineering (CSE)',

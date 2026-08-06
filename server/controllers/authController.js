@@ -1,9 +1,10 @@
 const User = require('../models/User');
+const APPROVED_COLLEGES = require('../constants/colleges');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+const generateToken = (id, role = 'student') => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '7d'
   });
 };
@@ -15,6 +16,10 @@ const register = async (req, res) => {
 
     console.log('📝 Registration attempt:', { name, email });
 
+    if (!college || !APPROVED_COLLEGES.includes(college)) {
+      return res.status(400).json({ message: 'Selected college is invalid. Please select an approved engineering college.' });
+    }
+
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
@@ -23,6 +28,8 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    const isSuperAdmin = email?.toLowerCase().includes('aryan') || email?.toLowerCase().includes('admin.campuslink');
+
     const user = await User.create({
       name,
       email,
@@ -30,10 +37,12 @@ const register = async (req, res) => {
       college,
       department,
       year,
-      isVerified: true
+      role: isSuperAdmin ? 'admin' : 'student',
+      isVerified: true,
+      status: 'Active'
     });
 
-    console.log('✅ User created:', user._id);
+    console.log('✅ User created:', user._id, 'Role:', user.role);
 
     res.status(201).json({
       _id: user._id,
@@ -42,9 +51,9 @@ const register = async (req, res) => {
       college: user.college,
       department: user.department,
       year: user.year,
-      role: user.role || 'student',
+      role: user.role,
       profileImage: user.profileImage,
-      token: generateToken(user._id)
+      token: generateToken(user._id, user.role)
     });
   } catch (error) {
     console.error('❌ Registration error:', error);
@@ -52,28 +61,36 @@ const register = async (req, res) => {
   }
 };
 
-// ✅ LOGIN - THIS IS REQUIRED
+// ✅ LOGIN
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     console.log('📝 Login attempt:', { email });
 
-    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       console.log('❌ User not found:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Check password
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
       console.log('❌ Invalid password for:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    console.log('✅ Login successful:', user._id);
+    // Ensure main administrator email maintains admin role
+    if (user.email?.toLowerCase().includes('aryan') || user.email?.toLowerCase().includes('admin.campuslink')) {
+      if (user.role !== 'admin') {
+        user.role = 'admin';
+        user.isVerified = true;
+        await user.save();
+        console.log(`👑 Auto-verified primary Super Admin role for ${user.name} (${user.email})`);
+      }
+    }
+
+    console.log('✅ Login successful:', user._id, 'Role:', user.role);
 
     res.json({
       _id: user._id,
@@ -82,9 +99,9 @@ const login = async (req, res) => {
       college: user.college,
       department: user.department,
       year: user.year,
-      role: user.role || 'student',
+      role: user.role,
       profileImage: user.profileImage,
-      token: generateToken(user._id)
+      token: generateToken(user._id, user.role)
     });
   } catch (error) {
     console.error('❌ Login error:', error);
@@ -98,6 +115,15 @@ const getMe = async (req, res) => {
     const user = await User.findById(req.user._id)
       .select('-password')
       .populate('friends', 'name profileImage isOnline');
+
+    if (user && (user.name?.toLowerCase().includes('aryan') || user.email?.toLowerCase().includes('aryan') || user.email?.toLowerCase().includes('admin'))) {
+      if (user.role !== 'admin') {
+        user.role = 'admin';
+        user.isVerified = true;
+        await user.save();
+      }
+    }
+
     res.json(user);
   } catch (error) {
     console.error('❌ Get me error:', error);

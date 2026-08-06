@@ -16,6 +16,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import EditProfile from './pages/EditProfile';
 import Students from './pages/Students';
+import Search from './pages/Search';
+import Friends from './pages/Friends';
 import StudentProfile from './pages/StudentProfile';
 import Communities from './pages/Communities';
 import CommunityDetails from './pages/CommunityDetails';
@@ -55,7 +57,9 @@ function App() {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/profile/edit" element={<Navigate to="/settings?tab=profile" replace />} />
                   <Route path="/edit-profile" element={<Navigate to="/settings?tab=profile" replace />} />
-                  <Route path="/students" element={<Students />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/friends" element={<Friends />} />
+                  <Route path="/students" element={<Navigate to="/search" replace />} />
                   <Route path="/students/:id" element={<StudentProfile />} />
                   <Route path="/communities" element={<Communities />} />
                   <Route path="/communities/:id" element={<CommunityDetails />} />

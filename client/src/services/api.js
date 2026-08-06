@@ -135,4 +135,17 @@ export const upload = {
   },
 };
 
+export const admin = {
+  getStats: () => api.get('/admin/stats'),
+  getUsers: (params) => api.get('/admin/users', { params }),
+  getUserDetails: (id) => api.get(`/admin/users/${id}/details`),
+  createUser: (data) => api.post('/admin/users', data),
+  deleteUser: (id, data) => api.delete(`/admin/users/${id}`, { data }),
+  resetPassword: (id, data) => api.patch(`/admin/users/${id}/password`, data),
+  changeRole: (id, data) => api.patch(`/admin/users/${id}/role`, data),
+  toggleVerification: (id) => api.patch(`/admin/users/${id}/verify`),
+  toggleSuspend: (id) => api.patch(`/admin/users/${id}/suspend`),
+  getAuditLogs: () => api.get('/admin/audit-logs'),
+};
+
 export default api;

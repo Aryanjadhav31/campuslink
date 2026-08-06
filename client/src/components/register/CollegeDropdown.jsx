@@ -1,17 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BuildingOfficeIcon, CheckIcon, MagnifyingGlassIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import { APPROVED_COLLEGES } from '../../constants/colleges';
 
-const colleges = [
-  'Walchand College of Engineering',
-  'Government College of Engineering, Karad',
-  "Kolhapur Institute of Technology's College of Engineering",
-  "DKTE Society's Textile & Engineering Institute",
-  'Rajarambapu Institute of Technology',
-  'Annasaheb Dange College of Engineering & Technology',
-  'Padmabhooshan Vasantdada Patil Institute of Technology',
-  'Ashokrao Mane Group of Institutions',
-  'Sanjay Ghodawat University'
-];
+const colleges = APPROVED_COLLEGES;
 
 const CollegeDropdown = ({ register, errors }) => {
   const [isOpen, setIsOpen] = useState(false);

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const APPROVED_COLLEGES = require('../constants/colleges');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -19,7 +20,8 @@ const userSchema = new mongoose.Schema({
   },
   college: {
     type: String,
-    required: true
+    required: true,
+    enum: APPROVED_COLLEGES
   },
   department: {
     type: String,
@@ -153,6 +155,15 @@ const userSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: true
+  },
+  status: {
+    type: String,
+    enum: ['Active', 'Suspended'],
+    default: 'Active'
+  },
+  phone: {
+    type: String,
+    default: ''
   },
   isOnline: {
     type: Boolean,

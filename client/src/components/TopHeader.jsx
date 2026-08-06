@@ -25,7 +25,7 @@ const TopHeader = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/students?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/search?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 

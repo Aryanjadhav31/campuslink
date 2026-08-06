@@ -1,19 +1,6 @@
 const User = require('../models/User');
+const APPROVED_COLLEGES = require('../constants/colleges');
 const bcrypt = require('bcryptjs');
-
-// Master engineering defaults
-const MASTER_COLLEGES = [
-  'Walchand College of Engineering, Sangli (WCE)',
-  'Government College of Engineering, Karad (GCEK)',
-  'Kolhapur Institute of Technology (KIT)',
-  "DKTE Society's Textile & Engineering Institute, Ichalkaranji",
-  'Rajarambapu Institute of Technology, Islampur (RIT)',
-  'Annasaheb Dange College of Engineering & Technology, Ashta',
-  'Padmabhooshan Vasantdada Patil Institute of Technology, Budhgaon',
-  'Ashokrao Mane Group of Institutions, Vathar',
-  'Sanjay Ghodawat University, Kolhapur',
-  'New Institute of Technology, Kolhapur'
-];
 
 const MASTER_DEPARTMENTS = [
   'Computer Science and Engineering',
@@ -45,17 +32,14 @@ const MASTER_YEARS = [
 // @access  Private
 const getFilterOptions = async (req, res) => {
   try {
-    const dbColleges = await User.distinct('college', { role: { $ne: 'admin' }, college: { $ne: null, $ne: '' } });
-    const dbDepartments = await User.distinct('department', { role: { $ne: 'admin' }, department: { $ne: null, $ne: '' } });
-    const dbYears = await User.distinct('year', { role: { $ne: 'admin' }, year: { $ne: null, $ne: '' } });
+    const dbDepartments = await User.distinct('department', { department: { $ne: null, $ne: '' } });
+    const dbYears = await User.distinct('year', { year: { $ne: null, $ne: '' } });
 
-    // Merge DB values with Master Lists & remove duplicates
-    const combinedColleges = Array.from(new Set([...MASTER_COLLEGES, ...dbColleges.filter(Boolean)])).sort();
     const combinedDepartments = Array.from(new Set([...MASTER_DEPARTMENTS, ...dbDepartments.filter(Boolean)])).sort();
     const combinedYears = Array.from(new Set([...MASTER_YEARS, ...dbYears.filter(Boolean)])).sort();
 
     res.json({
-      colleges: combinedColleges,
+      colleges: APPROVED_COLLEGES,
       departments: combinedDepartments,
       years: combinedYears
     });
@@ -75,12 +59,16 @@ const getUsers = async (req, res) => {
   try {
     const { search, college, department, year, academicYear, skill, interest, sort } = req.query;
 
+    const targetYear = year || academicYear;
+
     // Ensure all registered accounts are marked verified for directory discovery
     await User.updateMany({ isVerified: false }, { $set: { isVerified: true } });
 
+    // The query MUST exclude ONLY the currently logged-in user!
+    // No role restrictions, no account restrictions!
     let query = {
       _id: { $ne: req.user._id },
-      role: { $ne: 'admin' }
+      isVerified: { $ne: false }
     };
 
     // 1. Dynamic College Filter
@@ -89,24 +77,27 @@ const getUsers = async (req, res) => {
       query.college = { $regex: new RegExp(escapeRegex(c), 'i') };
     }
 
-    // 2. Dynamic Department Filter
+    // 2. Dynamic Department Filter (Normalizing CSE / IT / ENTC acronyms & whitespace)
     if (department && department.trim() && department !== 'All Departments') {
       const d = department.trim();
-      query.department = { $regex: new RegExp(escapeRegex(d), 'i') };
+      const baseDept = d.replace(/\s*\([^)]*\)/g, '').trim();
+      const escapedBase = escapeRegex(baseDept);
+      const escapedOriginal = escapeRegex(d);
+      
+      query.department = { $regex: new RegExp(`${escapedBase}|${escapedOriginal}`, 'i') };
     }
 
-    // 3. Dynamic Academic Year Filter
-    const targetYear = year || academicYear;
+    // 3. Dynamic Academic Year Filter (Matching 1st / First Year / 1 / 2nd / 2 / 3rd / 3 / 4th / 4 / Final Year)
     if (targetYear && targetYear.trim() && targetYear !== 'All Years') {
       const y = targetYear.trim();
-      if (/first|1st/i.test(y)) {
-        query.year = { $regex: /first|1st/i };
-      } else if (/second|2nd/i.test(y)) {
-        query.year = { $regex: /second|2nd/i };
-      } else if (/third|3rd/i.test(y)) {
-        query.year = { $regex: /third|3rd/i };
-      } else if (/final|fourth|4th/i.test(y)) {
-        query.year = { $regex: /final|fourth|4th|graduated/i };
+      if (/first|1st|1\b/i.test(y)) {
+        query.year = { $regex: /first|1st|1/i };
+      } else if (/second|2nd|2\b/i.test(y)) {
+        query.year = { $regex: /second|2nd|2/i };
+      } else if (/third|3rd|3\b/i.test(y)) {
+        query.year = { $regex: /third|3rd|3/i };
+      } else if (/final|fourth|4th|graduated|4\b/i.test(y)) {
+        query.year = { $regex: /final|fourth|4th|graduated|4/i };
       } else {
         query.year = { $regex: new RegExp(escapeRegex(y), 'i') };
       }
@@ -143,22 +134,18 @@ const getUsers = async (req, res) => {
       sortOptions = { college: 1, name: 1 };
     } else if (sort === 'department') {
       sortOptions = { department: 1, name: 1 };
-    } else if (sort === 'same_college') {
-      const currentUser = await User.findById(req.user._id).select('college department');
-      if (currentUser?.college) {
-        query.college = currentUser.college;
-      }
-    } else if (sort === 'same_department') {
-      const currentUser = await User.findById(req.user._id).select('college department');
-      if (currentUser?.department) {
-        query.department = currentUser.department;
-      }
     }
+
+    console.log(`🔍 [Student Search Query] Logged-in User: ${req.user.name} (${req.user._id}, role: ${req.user.role})`);
+    console.log(`   Filters received:`, { college, department, year: targetYear, search, sort });
+    console.log(`   MongoDB Query:`, JSON.stringify(query));
 
     const users = await User.find(query)
       .select('-password')
       .populate('friends', 'name profileImage')
       .sort(sortOptions);
+
+    console.log(`   -> Returned ${users.length} matching student(s).`);
 
     // Sanitize email based on privacy settings
     const sanitizedUsers = users.map(u => {
@@ -171,6 +158,7 @@ const getUsers = async (req, res) => {
 
     res.json(sanitizedUsers);
   } catch (error) {
+    console.error('❌ Error in getUsers search controller:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -238,6 +226,10 @@ const updateProfile = async (req, res) => {
     } = req.body;
 
     const user = await User.findById(req.user._id);
+
+    if (college && !APPROVED_COLLEGES.includes(college)) {
+      return res.status(400).json({ message: 'Selected college is invalid. Please select an approved engineering college.' });
+    }
 
     // Validate username uniqueness if changed
     if (username && username.trim() !== user.username) {

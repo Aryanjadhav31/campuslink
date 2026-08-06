@@ -31,9 +31,9 @@ const DarkSidebar = ({ activeTab = 'profile' }) => {
 
   const navItems = [
     { key: 'home', label: 'Home', path: '/dashboard', outlineIcon: HomeIcon, solidIcon: HomeSolid },
-    { key: 'friends', label: 'Friends', path: '/students', outlineIcon: UserGroupIcon, solidIcon: UserGroupSolid },
+    { key: 'friends', label: 'Friends', path: '/friends', outlineIcon: UserGroupIcon, solidIcon: UserGroupSolid },
     { key: 'notifications', label: 'Notifications', path: '/notifications', outlineIcon: BellIcon, solidIcon: BellSolid, badge: unreadCount },
-    { key: 'search', label: 'Search', path: '/students', outlineIcon: MagnifyingGlassIcon, solidIcon: MagnifyingGlassIcon },
+    { key: 'search', label: 'Search', path: '/search', outlineIcon: MagnifyingGlassIcon, solidIcon: MagnifyingGlassIcon },
     { key: 'create', label: 'Create Post', path: '/create-post', outlineIcon: PlusCircleIcon, solidIcon: PlusCircleIcon }
   ];
 
@@ -68,8 +68,9 @@ const DarkSidebar = ({ activeTab = 'profile' }) => {
             const currentPath = location.pathname;
             let isActive = false;
             if (item.key === 'home' && currentPath === '/dashboard') isActive = true;
-            else if (item.key === 'friends' && (currentPath === '/students' || currentPath.startsWith('/students/'))) isActive = true;
+            else if (item.key === 'friends' && currentPath === '/friends') isActive = true;
             else if (item.key === 'notifications' && currentPath === '/notifications') isActive = true;
+            else if (item.key === 'search' && (currentPath === '/search' || currentPath.startsWith('/students/'))) isActive = true;
             else if (item.key === 'create' && currentPath === '/create-post') isActive = true;
             else if (activeTab === item.key) isActive = true;
 

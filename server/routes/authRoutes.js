@@ -23,14 +23,14 @@ router.post('/google', async (req, res) => {
     const domain = email.split('@')[1];
     const allowedDomains = [
       'ritindia.edu',
-      'walchandsangli.ac.in',
+      'adcet.ac.in',
+      'dkte.ac.in',
       'gcekarad.ac.in',
       'kitcoek.ac.in',
-      'dkte.ac.in',
-      'adcet.ac.in',
-      'pvpit.ac.in',
-      'amgoi.ac.in',
-      'sanjayghodawatuniversity.ac.in'
+      'walchandsangli.ac.in',
+      'tkiet.ac.in',
+      'dypgroup.edu.in',
+      'dypatil.edu'
     ];
 
     if (!allowedDomains.includes(domain)) {

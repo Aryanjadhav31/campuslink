@@ -28,6 +28,8 @@ import {
   FaWhatsapp
 } from 'react-icons/fa';
 
+import { APPROVED_COLLEGES } from '../constants/colleges';
+
 const EditProfile = () => {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
@@ -311,14 +313,19 @@ const EditProfile = () => {
                   </div>
                   <div>
                     <label className="block mb-2 text-sm font-semibold text-gray-700">College</label>
-                    <input
-                      type="text"
+                    <select
                       name="college"
                       value={formData.college}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 transition border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Your college name"
-                    />
+                      className="w-full px-4 py-2 transition border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    >
+                      <option value="">Select College</option>
+                      {APPROVED_COLLEGES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block mb-2 text-sm font-semibold text-gray-700">Department</label>

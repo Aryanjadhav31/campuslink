@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { Link, useSearchParams } from 'react-router-dom';
-import api, { friends, students as studentsApi } from '../services/api';
+import { friends, students as studentsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { 
@@ -19,7 +19,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { APPROVED_COLLEGES } from '../constants/colleges';
 
-const Students = () => {
+const Search = () => {
   const { user: currentUser, updateUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -39,19 +39,16 @@ const Students = () => {
   const [sortOption, setSortOption] = useState('name');
   const [showFilters, setShowFilters] = useState(true);
 
-  // Dynamic filter dropdown options loaded from MongoDB
   const [filterOptions, setFilterOptions] = useState({
     colleges: [],
     departments: [],
     years: []
   });
 
-  // Friend Request Trackers
   const [sentRequests, setSentRequests] = useState({});
   const [incomingRequests, setIncomingRequests] = useState({});
   const [actionLoading, setActionLoading] = useState({});
 
-  // 1. Fetch Dynamic Dropdown Options from MongoDB
   useEffect(() => {
     fetchFilterOptions();
     fetchFriendRequests();
@@ -95,7 +92,6 @@ const Students = () => {
     }
   };
 
-  // 2. Debounce Search Term (300ms)
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchTerm);
@@ -104,7 +100,6 @@ const Students = () => {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  // 3. Update URL query string when search changes
   useEffect(() => {
     if (debouncedSearch) {
       setSearchParams({ search: debouncedSearch });
@@ -113,7 +108,6 @@ const Students = () => {
     }
   }, [debouncedSearch, setSearchParams]);
 
-  // 4. Fetch Students dynamically from MongoDB based on search, filters & sorting
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
@@ -128,7 +122,7 @@ const Students = () => {
       setStudents(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching students:', error);
-      toast.error('Failed to load campus directory');
+      toast.error('Failed to load student directory');
       setStudents([]);
     } finally {
       setLoading(false);
@@ -139,7 +133,6 @@ const Students = () => {
     fetchStudents();
   }, [fetchStudents]);
 
-  // Clear Filters Handler
   const handleClearFilters = () => {
     setSearchTerm('');
     setDebouncedSearch('');
@@ -148,28 +141,26 @@ const Students = () => {
     setSearchParams({});
   };
 
-  // Send Friend Request Handler
   const handleAddFriend = async (studentId) => {
     setActionLoading(prev => ({ ...prev, [studentId]: true }));
     try {
       const { data } = await friends.sendRequest(studentId);
       setSentRequests(prev => ({ ...prev, [studentId]: data.friendRequest?._id || true }));
-      toast.success('Friend request sent! 🚀');
+      toast.success('Connection request sent! 🚀');
     } catch (error) {
       console.error('Error sending friend request:', error);
-      toast.error(error.response?.data?.message || 'Failed to send request');
+      toast.error(error.response?.data?.message || 'Failed to send connection request');
     } finally {
       setActionLoading(prev => ({ ...prev, [studentId]: false }));
     }
   };
 
-  // Accept Friend Request Handler
   const handleAcceptFriend = async (studentId) => {
     const requestId = incomingRequests[studentId] || studentId;
     setActionLoading(prev => ({ ...prev, [studentId]: true }));
     try {
       await friends.acceptRequest(requestId);
-      toast.success('Friend request accepted! 🎉');
+      toast.success('Connection accepted! 🎉');
       setIncomingRequests(prev => {
         const copy = { ...prev };
         delete copy[studentId];
@@ -182,19 +173,18 @@ const Students = () => {
       }
     } catch (error) {
       console.error('Error accepting friend request:', error);
-      toast.error(error.response?.data?.message || 'Failed to accept request');
+      toast.error(error.response?.data?.message || 'Failed to accept connection request');
     } finally {
       setActionLoading(prev => ({ ...prev, [studentId]: false }));
     }
   };
 
-  // Reject Friend Request Handler
   const handleRejectFriend = async (studentId) => {
     const requestId = incomingRequests[studentId] || studentId;
     setActionLoading(prev => ({ ...prev, [studentId]: true }));
     try {
       await friends.rejectRequest(requestId);
-      toast.success('Friend request rejected');
+      toast.success('Connection request rejected');
       setIncomingRequests(prev => {
         const copy = { ...prev };
         delete copy[studentId];
@@ -202,7 +192,7 @@ const Students = () => {
       });
     } catch (error) {
       console.error('Error rejecting friend request:', error);
-      toast.error(error.response?.data?.message || 'Failed to reject request');
+      toast.error(error.response?.data?.message || 'Failed to reject connection request');
     } finally {
       setActionLoading(prev => ({ ...prev, [studentId]: false }));
     }
@@ -212,29 +202,27 @@ const Students = () => {
   const hasActiveFilters = searchTerm || filters.college || filters.department || filters.year || sortOption !== 'name';
 
   return (
-    <Layout activeTab="friends">
+    <Layout activeTab="search">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         
-        {/* Top Header & Page Title */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight flex items-center">
-              <AcademicCapIcon className="w-8 h-8 mr-2.5 text-[#0095F6]" />
-              Campus Directory
+              <MagnifyingGlassIcon className="w-8 h-8 mr-2.5 text-[#0095F6]" />
+              Student Search
             </h1>
             <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">
-              Browse, search, and connect with verified students across colleges and departments
+              Discover and connect with verified students across supported engineering colleges
             </p>
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* Student Count Badge */}
             <span className="px-4 py-1.5 bg-blue-50 dark:bg-[#1A1A1A] border border-blue-200 dark:border-[#262626] text-blue-600 dark:text-blue-400 text-xs sm:text-sm font-bold rounded-full flex items-center shadow-sm">
               <SparklesIcon className="w-4 h-4 mr-1.5 text-blue-500 animate-pulse" />
               {studentsArray.length} {studentsArray.length === 1 ? 'Student' : 'Students'} Found
             </span>
 
-            {/* Filter Toggle Button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center px-4 py-2 space-x-2 text-xs sm:text-sm font-semibold transition-all bg-gray-100 dark:bg-[#161616] border border-gray-200 dark:border-[#242424] text-gray-700 dark:text-zinc-300 rounded-xl hover:bg-gray-200 dark:hover:bg-[#262626] cursor-pointer"
@@ -245,11 +233,10 @@ const Students = () => {
           </div>
         </div>
 
-        {/* Search Bar & Controls Box */}
-        <div className="p-4 sm:p-5 mb-8 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] shadow-sm dark:shadow-2xl rounded-2xl space-y-4">
+        {/* Controls Box */}
+        <div className="p-4 sm:p-5 mb-8 bg-white dark:bg-[#111111] border border-gray-200 dark:border-[#1F1F1F] shadow-sm rounded-2xl space-y-4">
           
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search Input */}
             <div className="relative flex-1">
               <input
                 type="text"
@@ -268,7 +255,7 @@ const Students = () => {
                 </button>
               )}
             </div>
-            {/* Sort Options */}
+            
             <div className="sm:w-56">
               <select
                 value={sortOption}
@@ -278,17 +265,13 @@ const Students = () => {
                 <option value="name">Name (A–Z)</option>
                 <option value="name_desc">Name (Z–A)</option>
                 <option value="newest">Recently Joined</option>
-                <option value="placement">Highest Placement Readiness</option>
                 <option value="active">Most Active</option>
               </select>
             </div>
           </div>
 
-          {/* Expanded Dynamic Filters (MongoDB Live Data & Master Lists) */}
           {showFilters && (
             <div className="pt-4 border-t border-gray-200 dark:border-[#1F1F1F] grid grid-cols-1 sm:grid-cols-3 gap-4">
-              
-              {/* 1. Dynamic College Select */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5 flex items-center">
                   <BuildingLibraryIcon className="w-3.5 h-3.5 mr-1 text-blue-500" /> College
@@ -307,7 +290,6 @@ const Students = () => {
                 </select>
               </div>
 
-              {/* 2. Dynamic Department Select */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5 flex items-center">
                   <AcademicCapIcon className="w-3.5 h-3.5 mr-1 text-blue-500" /> Department
@@ -326,7 +308,6 @@ const Students = () => {
                 </select>
               </div>
 
-              {/* 3. Academic Year Select */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                   Academic Year
@@ -344,7 +325,6 @@ const Students = () => {
                 </select>
               </div>
 
-              {/* Clear Filters Action */}
               {hasActiveFilters && (
                 <div className="sm:col-span-3 flex justify-end pt-1">
                   <button
@@ -359,7 +339,7 @@ const Students = () => {
           )}
         </div>
 
-        {/* Student Cards Directory Grid */}
+        {/* Results Grid */}
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[300px]">
             <div className="relative w-12 h-12">
@@ -367,7 +347,7 @@ const Students = () => {
               <div className="absolute inset-0 border-t-4 border-blue-600 rounded-full animate-spin" />
             </div>
             <p className="mt-4 text-xs font-medium text-gray-500 dark:text-zinc-400 animate-pulse">
-              Searching student directory...
+              Searching students...
             </p>
           </div>
         ) : studentsArray.length === 0 ? (
@@ -375,9 +355,9 @@ const Students = () => {
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-[#161616] text-gray-400 dark:text-zinc-500 rounded-full flex items-center justify-center">
               <MagnifyingGlassIcon className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">No students found matching your selected filters.</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">No students found</h3>
             <p className="mt-2 text-xs sm:text-sm text-gray-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
-              No students found matching your selected filters. Try changing the college, department, academic year, or search term.
+              No students found matching your selected filters. Try changing the college, department, academic year, or search query.
             </p>
             {hasActiveFilters && (
               <button
@@ -403,7 +383,6 @@ const Students = () => {
                 >
                   <div className="space-y-4">
                     
-                    {/* Header Row: Avatar + Name + Username + Verified Badge */}
                     <div className="flex items-start space-x-3.5 min-w-0">
                       <div className="relative shrink-0">
                         <img
@@ -439,7 +418,6 @@ const Students = () => {
                       </div>
                     </div>
 
-                    {/* Academic Details */}
                     <div className="space-y-1 text-xs text-gray-600 dark:text-zinc-400">
                       <p className="font-semibold text-gray-900 dark:text-zinc-200 truncate flex items-center">
                         <BuildingLibraryIcon className="w-3.5 h-3.5 mr-1.5 text-gray-400 shrink-0" />
@@ -451,14 +429,12 @@ const Students = () => {
                       </p>
                     </div>
 
-                    {/* Bio Snippet */}
                     {student.bio && (
                       <p className="text-xs text-gray-500 dark:text-zinc-400 line-clamp-2 leading-relaxed italic bg-gray-50 dark:bg-[#161616] p-2 rounded-lg">
                         "{student.bio}"
                       </p>
                     )}
 
-                    {/* Skills Tags */}
                     {student.skills && student.skills.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {student.skills.slice(0, 3).map((skill, index) => (
@@ -469,16 +445,10 @@ const Students = () => {
                             {skill}
                           </span>
                         ))}
-                        {student.skills.length > 3 && (
-                          <span className="text-[10px] text-gray-400 dark:text-zinc-500 self-center">
-                            +{student.skills.length - 3}
-                          </span>
-                        )}
                       </div>
                     )}
                   </div>
 
-                  {/* Card Bottom Actions */}
                   <div className="pt-4 mt-4 border-t border-gray-100 dark:border-[#1F1F1F] flex items-center justify-between gap-2">
                     <Link
                       to={`/students/${student._id}`}
@@ -490,16 +460,16 @@ const Students = () => {
                     {isFriend ? (
                       <button
                         disabled
-                        className="py-2 px-3 bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-xl flex items-center justify-center shrink-0 cursor-default border border-emerald-500/20"
+                        className="py-2 px-3 bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-xl flex items-center justify-center shrink-0 cursor-default border border-emerald-500/20 opacity-80"
                       >
                         <CheckCircleIcon className="w-4 h-4 mr-1 text-emerald-500" /> Friends
                       </button>
                     ) : isRequestSent ? (
                       <button
                         disabled
-                        className="py-2 px-3 bg-gray-100 dark:bg-[#262626] text-gray-500 dark:text-zinc-400 text-xs font-semibold rounded-xl flex items-center shrink-0 cursor-default border border-gray-200 dark:border-[#333]"
+                        className="py-2 px-3 bg-gray-100 dark:bg-[#262626] text-gray-500 dark:text-zinc-400 text-xs font-semibold rounded-xl flex items-center shrink-0 cursor-default border border-gray-200 dark:border-[#333] opacity-80"
                       >
-                        <ClockIcon className="w-4 h-4 mr-1 text-amber-500" /> Request Sent
+                        <ClockIcon className="w-4 h-4 mr-1 text-amber-500" /> Pending
                       </button>
                     ) : isIncomingRequest ? (
                       <div className="flex items-center space-x-1.5 shrink-0">
@@ -507,7 +477,6 @@ const Students = () => {
                           onClick={() => handleAcceptFriend(student._id)}
                           disabled={isLoading}
                           className="py-2 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center cursor-pointer disabled:opacity-50"
-                          title="Accept Request"
                         >
                           <CheckCircleIcon className="w-4 h-4 mr-1" /> Accept
                         </button>
@@ -515,7 +484,6 @@ const Students = () => {
                           onClick={() => handleRejectFriend(student._id)}
                           disabled={isLoading}
                           className="py-2 px-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center cursor-pointer disabled:opacity-50"
-                          title="Reject Request"
                         >
                           <XCircleIcon className="w-4 h-4 mr-1" /> Reject
                         </button>
@@ -547,4 +515,4 @@ const Students = () => {
   );
 };
 
-export default Students;
+export default Search;
