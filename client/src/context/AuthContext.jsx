@@ -2,6 +2,8 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+const API_URL = 'https://campuslink-backend-eqwk.onrender.com';
+
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
@@ -30,7 +32,7 @@ export const AuthProvider = ({ children }) => {
 
   const loadUser = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/auth/me');
+      const { data } = await axios.get(`${API_URL}/api/auth/me`);
       console.log('✅ User loaded:', data);
       setUser(data);
     } catch (error) {
@@ -45,7 +47,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const { data } = await axios.post('http://localhost:5000/api/auth/login', { 
+      const { data } = await axios.post(`${API_URL}/api/auth/login`, { 
         email, 
         password 
       });
@@ -67,7 +69,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const { data } = await axios.post('http://localhost:5000/api/auth/register', userData);
+      const { data } = await axios.post(`${API_URL}/api/auth/register`, userData);
       
       if (data.token) {
         localStorage.setItem('token', data.token);
