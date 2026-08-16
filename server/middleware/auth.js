@@ -13,13 +13,18 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'User not found' });
       }
 
-      // Auto-ensure admin role for main user "Aryan" if matched
-      if (req.user.name?.toLowerCase().includes('aryan') || req.user.email?.toLowerCase().includes('aryan') || req.user.email?.toLowerCase().includes('admin')) {
-        if (req.user.role !== 'admin') {
-          req.user.role = 'admin';
-          await User.findByIdAndUpdate(req.user._id, { role: 'admin', isVerified: true });
-          console.log(`👑 Auto-verified admin role for ${req.user.name}`);
-        }
+      // Enforce ADMIN_EMAIL strictly
+      const adminEmail = (process.env.ADMIN_EMAIL || 'aryanjyoti.31@gmail.com').toLowerCase();
+      const isTargetAdmin = req.user.email?.toLowerCase() === adminEmail;
+
+      if (isTargetAdmin && req.user.role !== 'admin') {
+        req.user.role = 'admin';
+        await User.findByIdAndUpdate(req.user._id, { role: 'admin', isVerified: true });
+        console.log(`👑 Verified admin role for ${req.user.email}`);
+      } else if (!isTargetAdmin && req.user.role === 'admin') {
+        req.user.role = 'student';
+        await User.findByIdAndUpdate(req.user._id, { role: 'student' });
+        console.warn(`🛡️ Demoted non-admin user ${req.user.email} to student`);
       }
 
       return next();

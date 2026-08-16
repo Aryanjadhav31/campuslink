@@ -76,8 +76,35 @@ io.on('connection', (socket) => {
 
 // ✅ MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log('✅ Connected to MongoDB');
+    
+    // Role Sanitization Migration
+    try {
+      const User = require('./models/User');
+      const adminEmail = (process.env.ADMIN_EMAIL || 'aryanjyoti.31@gmail.com').toLowerCase();
+      
+      // Demote all users with admin role whose email is NOT adminEmail
+      const demotedResult = await User.updateMany(
+        { email: { $ne: adminEmail }, role: 'admin' },
+        { $set: { role: 'student' } }
+      );
+      if (demotedResult.modifiedCount > 0) {
+        console.log(`🛡️ Demoted ${demotedResult.modifiedCount} unauthorized admin accounts to student role.`);
+      }
+
+      // Ensure designated admin user exists and has admin role
+      const adminUser = await User.findOne({ email: adminEmail });
+      if (adminUser && adminUser.role !== 'admin') {
+        adminUser.role = 'admin';
+        adminUser.isVerified = true;
+        await adminUser.save();
+        console.log(`👑 Enforced Admin role for designated email: ${adminEmail}`);
+      }
+    } catch (migErr) {
+      console.error('⚠️ Role migration notice:', migErr.message);
+    }
+
     server.listen(process.env.PORT || 5000, () => {
       console.log(`🚀 Server running on port ${process.env.PORT || 5000}`);
       console.log(`📡 Test: http://localhost:${process.env.PORT || 5000}/api/test`);

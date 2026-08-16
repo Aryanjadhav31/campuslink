@@ -28,7 +28,8 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const isSuperAdmin = email?.toLowerCase().includes('aryan') || email?.toLowerCase().includes('admin.campuslink');
+    const adminEmail = (process.env.ADMIN_EMAIL || 'aryanjyoti.31@gmail.com').toLowerCase();
+    const isSuperAdmin = email?.toLowerCase() === adminEmail;
 
     const user = await User.create({
       name,
@@ -80,13 +81,20 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Ensure main administrator email maintains admin role
-    if (user.email?.toLowerCase().includes('aryan') || user.email?.toLowerCase().includes('admin.campuslink')) {
+    // Ensure only process.env.ADMIN_EMAIL has admin role
+    const adminEmail = (process.env.ADMIN_EMAIL || 'aryanjyoti.31@gmail.com').toLowerCase();
+    if (user.email?.toLowerCase() === adminEmail) {
       if (user.role !== 'admin') {
         user.role = 'admin';
         user.isVerified = true;
         await user.save();
-        console.log(`👑 Auto-verified primary Super Admin role for ${user.name} (${user.email})`);
+        console.log(`👑 Verified Admin role for ${user.name} (${user.email})`);
+      }
+    } else {
+      if (user.role === 'admin') {
+        user.role = 'student';
+        await user.save();
+        console.log(`🛡️ Demoted unauthorized admin to student for ${user.name} (${user.email})`);
       }
     }
 
@@ -116,11 +124,19 @@ const getMe = async (req, res) => {
       .select('-password')
       .populate('friends', 'name profileImage isOnline');
 
-    if (user && (user.name?.toLowerCase().includes('aryan') || user.email?.toLowerCase().includes('aryan') || user.email?.toLowerCase().includes('admin'))) {
-      if (user.role !== 'admin') {
-        user.role = 'admin';
-        user.isVerified = true;
-        await user.save();
+    if (user) {
+      const adminEmail = (process.env.ADMIN_EMAIL || 'aryanjyoti.31@gmail.com').toLowerCase();
+      if (user.email?.toLowerCase() === adminEmail) {
+        if (user.role !== 'admin') {
+          user.role = 'admin';
+          user.isVerified = true;
+          await user.save();
+        }
+      } else {
+        if (user.role === 'admin') {
+          user.role = 'student';
+          await user.save();
+        }
       }
     }
 
