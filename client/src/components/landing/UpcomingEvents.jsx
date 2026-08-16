@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../services/api';
 import { 
   CalendarIcon, 
   MapPinIcon, 
@@ -19,7 +19,7 @@ const UpcomingEvents = () => {
 
   const fetchEvents = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/dashboard/upcoming-events');
+      const { data } = await api.get('/dashboard/upcoming-events');
       setEvents(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching events:', error);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -42,7 +42,7 @@ const Events = () => {
 
   const fetchEvents = async () => {
     try {
-      const { data } = await axios.get('/api/events');
+      const { data } = await api.get('/events');
       setEvents(data);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -55,7 +55,7 @@ const Events = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.post('/api/events', formData);
+      const { data } = await api.post('/events', formData);
       setEvents(prev => [data, ...prev]);
       toast.success('Event created successfully!');
       setShowCreateModal(false);
@@ -76,7 +76,7 @@ const Events = () => {
 
   const handleRSVP = async (eventId) => {
     try {
-      await axios.post(`/api/events/${eventId}/rsvp`);
+      await api.post(`/events/${eventId}/rsvp`);
       toast.success('RSVP updated!');
       fetchEvents();
     } catch (error) {

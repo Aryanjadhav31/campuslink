@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 import PostCard from '../components/PostCard';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import api from '../services/api';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
 import {
@@ -54,7 +54,7 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      const { data } = await axios.get('http://localhost:5000/api/posts');
+      const { data } = await api.get('/posts');
       setPosts(Array.isArray(data.posts) ? data.posts : []);
     } catch (err) {
       console.error('❌ Error fetching posts:', err);

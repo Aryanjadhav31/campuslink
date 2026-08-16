@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import {
   UserIcon,
@@ -86,7 +86,7 @@ const EditProfile = () => {
       if (profileImage) {
         const formDataImage = new FormData();
         formDataImage.append('image', profileImage);
-        const { data } = await axios.post('http://localhost:5000/api/upload/profile', formDataImage, {
+        const { data } = await api.post('/upload/profile', formDataImage, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         profileImageUrl = data.url;
@@ -122,7 +122,7 @@ const EditProfile = () => {
         updatedData.profileImage = profileImageUrl;
       }
 
-      const { data } = await axios.put('http://localhost:5000/api/users/profile', updatedData);
+      const { data } = await api.put('/users/profile', updatedData);
       updateUser(data);
       toast.success('Profile updated successfully! 🎉');
       navigate('/profile');

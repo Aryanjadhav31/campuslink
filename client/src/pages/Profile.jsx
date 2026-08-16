@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import axios from 'axios';
+import api from '../services/api';
 import PostCard from '../components/PostCard';
 
 // ✅ Social Media Icons
@@ -46,7 +46,7 @@ const Profile = () => {
 
   const fetchUserPosts = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/posts');
+      const { data } = await api.get('/posts');
       const userPosts = data.posts?.filter(p => p.user?._id === user?._id) || [];
       setPosts(userPosts);
     } catch (error) {

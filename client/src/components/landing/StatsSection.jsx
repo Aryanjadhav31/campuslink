@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 import { 
   UsersIcon, 
   BuildingOfficeIcon, 
@@ -41,7 +41,7 @@ const StatsSection = () => {
 
   const fetchStats = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/dashboard/stats');
+      const { data } = await api.get('/dashboard/stats');
       setStats(data);
       setCounts({
         students: data.totalStudents || 0,

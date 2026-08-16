@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../services/api';
 import { 
   TrophyIcon,
   UserGroupIcon,
@@ -19,7 +19,7 @@ const TopClubs = () => {
 
   const fetchClubs = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/dashboard/top-clubs');
+      const { data } = await api.get('/dashboard/top-clubs');
       setClubs(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching clubs:', error);

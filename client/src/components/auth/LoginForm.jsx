@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 import InputField from './InputField';
 import PasswordInput from './PasswordInput';
@@ -66,7 +66,7 @@ const LoginForm = () => {
   const handleGoogleSuccess = async (googleUser) => {
     setIsLoading(true);
     try {
-      const { data } = await axios.post('http://localhost:5000/api/auth/google', googleUser);
+      const { data } = await api.post('/auth/google', googleUser);
       if (data.token) {
         localStorage.setItem('token', data.token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;

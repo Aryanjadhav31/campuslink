@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import { 
   UserIcon,
@@ -183,7 +183,7 @@ const Settings = () => {
       if (profileImageFile) {
         const formDataImage = new FormData();
         formDataImage.append('image', profileImageFile);
-        const { data: uploadData } = await axios.post('http://localhost:5000/api/upload/profile', formDataImage, {
+        const { data: uploadData } = await api.post('/upload/profile', formDataImage, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         profileImageUrl = uploadData.url;
@@ -214,7 +214,7 @@ const Settings = () => {
         updatedPayload.profileImage = profileImageUrl;
       }
 
-      const { data } = await axios.put('http://localhost:5000/api/users/profile', updatedPayload);
+      const { data } = await api.put('/users/profile', updatedPayload);
       updateUser(data);
       toast.success('Profile updated successfully! 🎉');
     } catch (error) {
@@ -245,7 +245,7 @@ const Settings = () => {
     setSavingPassword(true);
 
     try {
-      const { data } = await axios.put('http://localhost:5000/api/users/password', {
+      const { data } = await api.put('/users/password', {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
       });
@@ -265,7 +265,7 @@ const Settings = () => {
     setSavingPrivacy(true);
 
     try {
-      const { data } = await axios.put('http://localhost:5000/api/users/settings/privacy', privacy);
+      const { data } = await api.put('/users/settings/privacy', privacy);
       updateUser(data);
       toast.success('Privacy preferences saved successfully! 🔒');
     } catch (error) {
@@ -281,7 +281,7 @@ const Settings = () => {
     setSavingNotifications(true);
 
     try {
-      const { data } = await axios.put('http://localhost:5000/api/users/settings/notifications', notifications);
+      const { data } = await api.put('/users/settings/notifications', notifications);
       updateUser(data);
       toast.success('Notification preferences saved! 🔔');
     } catch (error) {
@@ -298,7 +298,7 @@ const Settings = () => {
     setSavingAppearance(true);
 
     try {
-      const { data } = await axios.put('http://localhost:5000/api/users/settings/appearance', { theme: targetTheme });
+      const { data } = await api.put('/users/settings/appearance', { theme: targetTheme });
       updateUser(data);
       setTheme(targetTheme === 'system' ? 'dark' : targetTheme);
       toast.success(`Theme updated to ${targetTheme.toUpperCase()}! 🎨`);
@@ -315,7 +315,7 @@ const Settings = () => {
     }
     
     try {
-      await axios.delete('http://localhost:5000/api/users/profile');
+      await api.delete('/users/profile');
       toast.success('Account deleted');
       logout();
       navigate('/');

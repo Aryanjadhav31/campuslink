@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PostCard from '../components/PostCard';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -33,7 +33,7 @@ const CommunityDetails = () => {
 
   const fetchCommunityDetails = async () => {
     try {
-      const { data } = await axios.get(`/api/communities/${id}`);
+      const { data } = await api.get(`/communities/${id}`);
       setCommunity(data.community);
       setPosts(data.posts || []);
       
@@ -52,7 +52,7 @@ const CommunityDetails = () => {
 
   const handleJoin = async () => {
     try {
-      await axios.post(`/api/communities/${id}/join`);
+      await api.post(`/communities/${id}/join`);
       toast.success('Joined community!');
       setIsMember(true);
       fetchCommunityDetails();
@@ -63,7 +63,7 @@ const CommunityDetails = () => {
 
   const handleLeave = async () => {
     try {
-      await axios.post(`/api/communities/${id}/leave`);
+      await api.post(`/communities/${id}/leave`);
       toast.success('Left community');
       setIsMember(false);
       fetchCommunityDetails();
@@ -81,13 +81,13 @@ const CommunityDetails = () => {
       if (postImage) {
         const formData = new FormData();
         formData.append('image', postImage);
-        const { data } = await axios.post('/api/upload/image', formData, {
+        const { data } = await api.post('/upload/image', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         imageUrl = data.url;
       }
 
-      const { data } = await axios.post('/api/posts', {
+      const { data } = await api.post('/posts', {
         content: postContent,
         images: imageUrl ? [imageUrl] : [],
         community: id

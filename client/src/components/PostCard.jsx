@@ -13,7 +13,7 @@ import {
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import PostImageGrid from './PostImageGrid';
@@ -66,7 +66,7 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
   const handleLike = async () => {
     try {
       setIsLoading(true);
-      const { data } = await axios.post(`http://localhost:5000/api/posts/${post._id}/like`);
+      const { data } = await api.post(`/posts/${post._id}/like`);
       setLiked(!liked);
       setLikesCount(prev => liked ? prev - 1 : prev + 1);
       if (onLike) onLike(post._id);
@@ -83,7 +83,7 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
 
     try {
       setIsLoading(true);
-      const { data } = await axios.post(`http://localhost:5000/api/posts/${post._id}/comment`, { 
+      const { data } = await api.post(`/posts/${post._id}/comment`, { 
         text: comment 
       });
       
@@ -103,7 +103,7 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
   const handleConfirmDeletePost = async () => {
     try {
       setIsDeleting(true);
-      await axios.delete(`http://localhost:5000/api/posts/${post._id}`);
+      await api.delete(`/posts/${post._id}`);
       toast.success('Post deleted');
       setShowDeletePostModal(false);
       if (onDeletePost) onDeletePost(post._id);
@@ -119,7 +119,7 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
     if (!commentToDelete) return;
     try {
       setIsDeleting(true);
-      await axios.delete(`http://localhost:5000/api/posts/${post._id}/comments/${commentToDelete._id}`);
+      await api.delete(`/posts/${post._id}/comments/${commentToDelete._id}`);
       setComments(prev => prev.filter(c => c._id !== commentToDelete._id));
       toast.success('Comment deleted');
       setCommentToDelete(null);

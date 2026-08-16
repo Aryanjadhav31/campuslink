@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -30,7 +30,7 @@ const EventDetails = () => {
 
   const fetchEventDetails = async () => {
     try {
-      const { data } = await axios.get(`/api/events/${id}`);
+      const { data } = await api.get(`/events/${id}`);
       setEvent(data);
       
       const participant = data.participants.some(p => p._id === user?._id);
@@ -47,7 +47,7 @@ const EventDetails = () => {
 
   const handleRSVP = async () => {
     try {
-      await axios.post(`/api/events/${id}/rsvp`);
+      await api.post(`/events/${id}/rsvp`);
       toast.success('RSVP updated!');
       fetchEventDetails();
     } catch (error) {

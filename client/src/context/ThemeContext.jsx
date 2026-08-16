@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 
 const ThemeContext = createContext();
@@ -57,7 +57,7 @@ export const ThemeProvider = ({ children }) => {
     // Sync to backend if authenticated token exists
     const token = localStorage.getItem('token');
     if (token) {
-      axios.put('http://localhost:5000/api/users/settings/appearance', { theme: nextTheme })
+      api.put('/users/settings/appearance', { theme: nextTheme })
         .catch(() => { });
     }
   };

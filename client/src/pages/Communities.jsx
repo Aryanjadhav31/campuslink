@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import { 
   UserGroupIcon, 
@@ -35,7 +35,7 @@ const Communities = () => {
 
   const fetchCommunities = async () => {
     try {
-      const { data } = await axios.get('/api/communities');
+      const { data } = await api.get('/communities');
       setCommunities(data);
     } catch (error) {
       console.error('Error fetching communities:', error);
@@ -48,7 +48,7 @@ const Communities = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.post('/api/communities', formData);
+      const { data } = await api.post('/communities', formData);
       setCommunities(prev => [data, ...prev]);
       toast.success('Community created successfully!');
       setShowCreateModal(false);
@@ -60,7 +60,7 @@ const Communities = () => {
 
   const handleJoin = async (communityId) => {
     try {
-      await axios.post(`/api/communities/${communityId}/join`);
+      await api.post(`/communities/${communityId}/join`);
       toast.success('Joined community!');
       fetchCommunities();
     } catch (error) {
