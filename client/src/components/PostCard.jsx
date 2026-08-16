@@ -153,7 +153,7 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2.5">
-          <Link to={`/students/${post.user?._id}`} className="relative block group shrink-0">
+          <Link to={`/students/${postAuthorId}`} className="relative block group shrink-0">
             <div className="p-0.5 bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 rounded-full shadow-sm">
               <img
                 src={post.user?.profileImage || 'https://via.placeholder.com/40'}
@@ -164,7 +164,7 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
             </div>
           </Link>
           <div className="min-w-0">
-            <Link to={`/students/${post.user?._id}`} className="font-bold text-base text-gray-900 dark:text-white transition-colors hover:text-blue-600 truncate block">
+            <Link to={`/students/${postAuthorId}`} className="font-bold text-base text-gray-900 dark:text-white transition-colors hover:text-blue-600 truncate block">
               {post.user?.name || 'Unknown User'}
             </Link>
             <p className="text-xs text-gray-400 dark:text-zinc-400 font-medium leading-none mt-0.5">{formatDate(post.createdAt)}</p>
@@ -266,17 +266,34 @@ const PostCard = ({ post, onLike, onComment, onDeletePost, onDeleteComment }) =>
                 return (
                   <div key={commentItem._id} className="flex items-start justify-between group/comment py-1">
                     <div className="flex items-start space-x-2.5 flex-1 min-w-0">
-                      <img
-                        src={commentItem.user?.profileImage || 'https://via.placeholder.com/32'}
-                        alt={commentItem.user?.name}
-                        className="flex-shrink-0 object-cover w-8 h-8 rounded-full border border-gray-200 dark:border-[#262626]"
-                        onError={(e) => e.target.src = 'https://via.placeholder.com/32'}
-                      />
+                      {commentAuthorId ? (
+                        <Link to={`/students/${commentAuthorId}`} className="shrink-0 group">
+                          <img
+                            src={commentItem.user?.profileImage || 'https://via.placeholder.com/32'}
+                            alt={commentItem.user?.name}
+                            className="flex-shrink-0 object-cover w-8 h-8 rounded-full border border-gray-200 dark:border-[#262626] group-hover:scale-105 transition-transform"
+                            onError={(e) => e.target.src = 'https://via.placeholder.com/32'}
+                          />
+                        </Link>
+                      ) : (
+                        <img
+                          src={commentItem.user?.profileImage || 'https://via.placeholder.com/32'}
+                          alt={commentItem.user?.name}
+                          className="flex-shrink-0 object-cover w-8 h-8 rounded-full border border-gray-200 dark:border-[#262626]"
+                          onError={(e) => e.target.src = 'https://via.placeholder.com/32'}
+                        />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="bg-gray-100 dark:bg-[#161616] border border-gray-200/80 dark:border-[#242424] rounded-xl px-3.5 py-2">
-                          <p className="text-xs font-bold text-gray-900 dark:text-white">
-                            {commentItem.user?.name || 'Student'}
-                          </p>
+                          {commentAuthorId ? (
+                            <Link to={`/students/${commentAuthorId}`} className="text-xs font-bold text-gray-900 dark:text-white hover:text-blue-500 transition-colors block">
+                              {commentItem.user?.name || 'Student'}
+                            </Link>
+                          ) : (
+                            <p className="text-xs font-bold text-gray-900 dark:text-white">
+                              {commentItem.user?.name || 'Student'}
+                            </p>
+                          )}
                           <p className="text-xs text-gray-800 dark:text-zinc-300 mt-0.5 whitespace-pre-wrap">
                             {commentItem.text}
                           </p>

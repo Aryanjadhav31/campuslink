@@ -73,6 +73,7 @@ export const users = {
 
 export const students = {
   getAll: (params) => api.get('/students', { params }),
+  getById: (id) => api.get(`/students/${id}`),
   getFilterOptions: () => api.get('/students/filter-options'),
 };
 

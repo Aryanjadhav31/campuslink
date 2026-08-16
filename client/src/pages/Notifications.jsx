@@ -298,13 +298,21 @@ const Notifications = () => {
                     <div className="flex items-start space-x-4">
                       {/* Icon/Avatar */}
                       <div className="flex-shrink-0 mt-1">
-                        {notification.from?.profileImage ? (
-                          <img
-                            src={notification.from.profileImage}
-                            alt={notification.from.name}
-                            className="object-cover w-11 h-11 border-2 border-gray-200 dark:border-[#262626] rounded-full shadow-sm"
-                            onError={(e) => e.target.src = 'https://via.placeholder.com/44'}
-                          />
+                        {notification.from?._id || notification.from ? (
+                          <Link to={`/students/${notification.from._id || notification.from}`} className="block group">
+                            {notification.from?.profileImage ? (
+                              <img
+                                src={notification.from.profileImage}
+                                alt={notification.from.name || 'User'}
+                                className="object-cover w-11 h-11 border-2 border-gray-200 dark:border-[#262626] rounded-full shadow-sm group-hover:scale-105 transition-transform"
+                                onError={(e) => e.target.src = 'https://via.placeholder.com/44'}
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center w-11 h-11 bg-gray-100 dark:bg-[#1A1A1A] border border-gray-200 dark:border-[#262626] rounded-full group-hover:border-blue-500 transition-colors">
+                                {getNotificationIcon(notification.type)}
+                              </div>
+                            )}
+                          </Link>
                         ) : (
                           <div className="flex items-center justify-center w-11 h-11 bg-gray-100 dark:bg-[#1A1A1A] border border-gray-200 dark:border-[#262626] rounded-full">
                             {getNotificationIcon(notification.type)}

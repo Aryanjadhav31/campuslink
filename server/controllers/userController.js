@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const APPROVED_COLLEGES = require('../constants/colleges');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
 
 const MASTER_DEPARTMENTS = [
   'Computer Science and Engineering',
@@ -163,14 +164,28 @@ const getUsers = async (req, res) => {
   }
 };
 
-// @desc    Get user by ID
-// @route   GET /api/users/:id
+// @desc    Get user by ID or Username
+// @route   GET /api/users/:id or GET /api/students/:id
 // @access  Private
 const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id)
-      .select('-password')
-      .populate('friends', 'name profileImage isOnline');
+    const targetId = req.params.id;
+    if (!targetId || targetId === 'undefined') {
+      return res.status(400).json({ message: 'Invalid user identifier' });
+    }
+
+    let user;
+    if (mongoose.Types.ObjectId.isValid(targetId)) {
+      user = await User.findById(targetId)
+        .select('-password')
+        .populate('friends', 'name profileImage isOnline');
+    }
+
+    if (!user) {
+      user = await User.findOne({ username: targetId.toLowerCase() })
+        .select('-password')
+        .populate('friends', 'name profileImage isOnline');
+    }
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -181,16 +196,19 @@ const getUserById = async (req, res) => {
     // Enforce privacy settings when viewed by others
     if (user._id.toString() !== req.user._id.toString()) {
       const visibility = user.settings?.privacy?.profileVisibility || 'public';
-      const isFriend = user.friends.some(f => f._id.toString() === req.user._id.toString());
+      const isFriend = Array.isArray(user.friends) && user.friends.some(f => (f._id || f).toString() === req.user._id.toString());
 
       if (visibility === 'private' || (visibility === 'friends' && !isFriend)) {
-        return res.status(403).json({
-          message: 'This profile is private.',
-          isPrivate: true,
+        return res.json({
           _id: user._id,
           name: user.name,
           username: user.username,
-          profileImage: user.profileImage
+          profileImage: user.profileImage,
+          college: user.college,
+          department: user.department,
+          year: user.year,
+          isPrivate: true,
+          message: 'This profile is private.'
         });
       }
 
@@ -201,6 +219,7 @@ const getUserById = async (req, res) => {
 
     res.json(userObj);
   } catch (error) {
+    console.error('❌ Error in getUserById:', error);
     res.status(500).json({ message: error.message });
   }
 };
