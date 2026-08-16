@@ -77,13 +77,13 @@ const Students = () => {
         const sent = {};
         const incoming = {};
         data.forEach(req => {
-          if (req.status === 'pending') {
-            const senderId = req.sender._id || req.sender;
-            const receiverId = req.receiver._id || req.receiver;
-            if (senderId === currentUser?._id) {
-              sent[receiverId] = req._id;
-            } else if (receiverId === currentUser?._id) {
-              incoming[senderId] = req._id;
+          if (req && req.status === 'pending') {
+            const senderId = req.sender ? (req.sender._id || req.sender) : null;
+            const receiverId = req.receiver ? (req.receiver._id || req.receiver) : null;
+            if (senderId && String(senderId) === String(currentUser?._id)) {
+              if (receiverId) sent[receiverId] = req._id;
+            } else if (receiverId && String(receiverId) === String(currentUser?._id)) {
+              if (senderId) incoming[senderId] = req._id;
             }
           }
         });

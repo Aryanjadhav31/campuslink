@@ -84,6 +84,7 @@ export const friends = {
   getRequests: (params) => api.get('/friends/requests', { params }),
   getFriends: () => api.get('/friends'),
   remove: (friendId) => api.delete(`/friends/${friendId}`),
+  removeFriend: (friendId) => api.delete(`/friends/${friendId}`),
 };
 
 export const chat = {

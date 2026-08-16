@@ -71,14 +71,19 @@ const StudentProfile = () => {
     try {
       setLoading(true);
       const { data } = await users.getById(id);
+      if (!data) {
+        setProfileUser(null);
+        return;
+      }
       setProfileUser(data);
       
-      const checkFriend = user?.friends?.some(f => String(f._id || f) === String(data._id || id)) || 
-                          (Array.isArray(data?.friends) && data.friends.some(f => String(f._id || f) === String(user?._id)));
+      const targetId = data._id || id;
+      const checkFriend = (Array.isArray(user?.friends) && user.friends.some(f => f && String(f._id || f) === String(targetId))) || 
+                          (Array.isArray(data?.friends) && data.friends.some(f => f && String(f._id || f) === String(user?._id)));
       setIsFriend(Boolean(checkFriend));
 
       if (!data.isPrivate) {
-        fetchStudentPosts(data._id || id);
+        fetchStudentPosts(targetId);
       } else {
         setPostsLoading(false);
       }
@@ -96,7 +101,7 @@ const StudentProfile = () => {
     try {
       setPostsLoading(true);
       const { data } = await api.get('/posts');
-      const filtered = data.posts?.filter(p => String(p.user?._id || p.user) === String(targetUserId)) || [];
+      const filtered = data.posts?.filter(p => p && p.user && String(p.user._id || p.user) === String(targetUserId)) || [];
       setPosts(filtered);
     } catch (error) {
       console.error('❌ Error fetching student posts:', error);
@@ -112,9 +117,13 @@ const StudentProfile = () => {
       if (Array.isArray(data)) {
         setFriendRequests(data);
         
-        const pendingRequest = data.find(
-          req => (String(req.sender._id || req.sender) === String(id) || String(req.receiver._id || req.receiver) === String(id)) && req.status === 'pending'
-        );
+        const pendingRequest = data.find(req => {
+          if (!req || req.status !== 'pending') return false;
+          const senderId = req.sender ? (req.sender._id || req.sender) : null;
+          const receiverId = req.receiver ? (req.receiver._id || req.receiver) : null;
+          return (String(senderId) === String(id) || String(receiverId) === String(id));
+        });
+
         if (pendingRequest) {
           setFriendRequestStatus(pendingRequest.status);
         }
@@ -139,7 +148,11 @@ const StudentProfile = () => {
 
   const handleAcceptRequest = async () => {
     const targetId = profileUser?._id || id;
-    const request = friendRequests.find(req => String(req.sender._id || req.sender) === String(targetId));
+    const request = friendRequests.find(req => {
+      if (!req || !req.sender) return false;
+      const senderId = req.sender._id || req.sender;
+      return String(senderId) === String(targetId);
+    });
     const requestId = request ? request._id : targetId;
 
     try {
@@ -156,7 +169,11 @@ const StudentProfile = () => {
 
   const handleRejectRequest = async () => {
     const targetId = profileUser?._id || id;
-    const request = friendRequests.find(req => String(req.sender._id || req.sender) === String(targetId));
+    const request = friendRequests.find(req => {
+      if (!req || !req.sender) return false;
+      const senderId = req.sender._id || req.sender;
+      return String(senderId) === String(targetId);
+    });
     const requestId = request ? request._id : targetId;
 
     try {
@@ -187,7 +204,7 @@ const StudentProfile = () => {
     return profileUser?.socialLinks?.[key] || '';
   };
 
-  const targetUserIdStr = String(profileUser?._id || id);
+  const targetUserIdStr = String(profileUser?._id || id || '');
   const currentUserIdStr = String(user?._id || user?.id || '');
   const isOwnProfile = currentUserIdStr && targetUserIdStr && currentUserIdStr === targetUserIdStr;
   const isOnline = onlineUsers.includes(targetUserIdStr);
@@ -226,9 +243,12 @@ const StudentProfile = () => {
   }
 
   const isPending = friendRequestStatus === 'pending';
-  const isFriendRequestSent = friendRequests.some(
-    req => String(req.sender._id || req.sender) === currentUserIdStr && String(req.receiver._id || req.receiver) === targetUserIdStr && req.status === 'pending'
-  );
+  const isFriendRequestSent = Array.isArray(friendRequests) && friendRequests.some(req => {
+    if (!req || req.status !== 'pending' || !req.sender || !req.receiver) return false;
+    const senderId = req.sender._id || req.sender;
+    const receiverId = req.receiver._id || req.receiver;
+    return String(senderId) === currentUserIdStr && String(receiverId) === targetUserIdStr;
+  });
 
   return (
     <Layout>

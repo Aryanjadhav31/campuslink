@@ -61,7 +61,7 @@ const Friends = () => {
 
     setActionLoading(prev => ({ ...prev, [friendId]: true }));
     try {
-      await friends.removeFriend(friendId);
+      await friends.remove(friendId);
       toast.success(`Removed ${friendName} from friends`);
       const updated = friendsList.filter(f => f._id !== friendId);
       setFriendsList(updated);
