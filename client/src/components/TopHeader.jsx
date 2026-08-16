@@ -12,7 +12,8 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   SunIcon,
-  MoonIcon
+  MoonIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
 const TopHeader = () => {
@@ -158,6 +159,22 @@ const TopHeader = () => {
                   </Link>
                 )}
               </Menu.Item>
+
+              {/* Admin Panel (Admin Only) */}
+              {user?.role === 'admin' && (
+                <Menu.Item>
+                  {({ active }) => (
+                    <Link
+                      to="/admin"
+                      className={`${active ? 'bg-blue-600/20 text-white' : 'text-gray-300'
+                        } flex items-center px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl mx-1 transition-colors duration-150`}
+                    >
+                      <ShieldCheckIcon className="w-4 h-4 mr-3 text-blue-400" />
+                      Admin Panel
+                    </Link>
+                  )}
+                </Menu.Item>
+              )}
 
               {/* 5. Theme Toggle Switch */}
               <Menu.Item>

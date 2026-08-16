@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from './Layout';
-import { ShieldExclamationIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 const AdminRoute = () => {
-  const { user, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user && user.role !== 'admin') {
+      toast.error("You don't have permission to access the admin panel.");
+    }
+  }, [loading, user]);
 
   if (loading) {
     return (
@@ -17,20 +23,12 @@ const AdminRoute = () => {
     );
   }
 
-  if (!user || user.role !== 'admin') {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 space-y-4">
-          <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20">
-            <ShieldExclamationIcon className="w-8 h-8" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">403 - Access Denied</h2>
-          <p className="text-sm text-gray-500 dark:text-zinc-400 max-w-md">
-            You do not have administrator permissions to access this page. This activity has been logged.
-          </p>
-        </div>
-      </Layout>
-    );
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;

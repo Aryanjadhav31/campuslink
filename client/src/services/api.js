@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const RAW_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const CLEAN_BASE = RAW_API_URL.replace(/\/api\/?$/, '').replace(/\/$/, '');
@@ -44,6 +45,12 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       delete axios.defaults.headers.common['Authorization'];
       window.location.href = '/login';
+    } else if (error.response?.status === 403) {
+      const message = error.response?.data?.message || 'Access denied: Insufficient permissions';
+      toast.error(message);
+      if (window.location.pathname.startsWith('/admin')) {
+        window.location.href = '/dashboard';
+      }
     }
     
     return Promise.reject(error);

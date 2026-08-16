@@ -73,6 +73,7 @@ function App() {
                 {/* Admin Protected Routes */}
                 <Route element={<AdminRoute />}>
                   <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/*" element={<AdminDashboard />} />
                 </Route>
 
                 {/* 404 */}

@@ -11,7 +11,8 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   PlusCircleIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
 const Navbar = () => {
@@ -115,6 +116,21 @@ const Navbar = () => {
                       </Link>
                     )}
                   </Menu.Item>
+                  {user?.role === 'admin' && (
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/admin"
+                          className={`${
+                            active ? 'bg-gray-50 dark:bg-[#1A1A1A] text-blue-600 dark:text-white' : 'text-gray-700 dark:text-zinc-300'
+                          } flex items-center px-4 py-2.5 text-sm font-medium transition-colors`}
+                        >
+                          <ShieldCheckIcon className="w-5 h-5 mr-3 text-gray-400 dark:text-zinc-400" />
+                          Admin Panel
+                        </Link>
+                      )}
+                    </Menu.Item>
+                  )}
                   <Menu.Item>
                     {({ active }) => (
                       <button
@@ -179,6 +195,21 @@ const Navbar = () => {
                       </Link>
                     )}
                   </Menu.Item>
+                  {user?.role === 'admin' && (
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/admin"
+                          className={`${
+                            active ? 'bg-gray-50 dark:bg-[#1A1A1A] text-blue-600 dark:text-white' : 'text-gray-700 dark:text-zinc-300'
+                          } flex items-center px-4 py-2.5 text-sm font-medium border-t border-gray-100 dark:border-[#262626]`}
+                        >
+                          <ShieldCheckIcon className="w-5 h-5 mr-3 text-gray-400 dark:text-zinc-400" />
+                          Admin Panel
+                        </Link>
+                      )}
+                    </Menu.Item>
+                  )}
                 </Menu.Items>
               </Transition>
             </Menu>
